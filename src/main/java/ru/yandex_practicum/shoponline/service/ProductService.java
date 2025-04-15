@@ -31,5 +31,9 @@ public class ProductService {
                 .orElseThrow(NoSuchElementException::new);
     }
 
+    public Product findProductById(Long itemId) {
+        return productRepository.findById(itemId).orElseThrow(NoSuchElementException::new);
+    }
+
     //
 }

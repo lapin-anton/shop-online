@@ -52,4 +52,12 @@ public class ShopController {
                 .body(new ByteArrayResource(product.getImage()));
     }
 
+    @GetMapping("/item/{itemId}")
+    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
+        var product = productService.findProductById(itemId);
+        var item = new Item(product.getId(), product.getName(), product.getDescription(), product.getPrice());
+        model.addAttribute("item", item);
+        return "item";
+    }
+
 }
