@@ -18,18 +18,18 @@
             <table>
                 <tr>
                     <td>
-                        <img width="300" height="300" th:src="${'http://localhost:8080/'+item.getImgPath()}">
+                        <img width="300" height="300" th:src="${'http://localhost:8080/'+item.getProduct().getId()}">
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <b th:text="${item.getTitle()}"></b>
+                        <b th:text="${item.getProduct().getName()}"></b>
                     </td>
                     <td>
-                        <b th:text="${item.getPrice()}+' руб.'"></b>
+                        <b th:text="${item.getProduct().getPrice()}+' руб.'"></b>
                     </td>
                 </tr>
-                <tr><td th:text="${item.getDescription()}"></td></tr>
+                <tr><td th:text="${item.getProduct().getDescription()}"></td></tr>
                 <tr>
                     <td>
                         <form th:action="${'/cart/items/'+item.getId()}" method="post">

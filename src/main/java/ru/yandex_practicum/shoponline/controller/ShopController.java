@@ -67,4 +67,12 @@ public class ShopController {
         return "orders";
     }
 
+    @GetMapping("/cart/items")
+    public String showCart(Model model) {
+        var cart = orderService.getCart();
+        var items = cart.getItems();
+        model.addAttribute("items", items);
+        return "cart";
+    }
+
 }
