@@ -34,7 +34,7 @@ public class ShopController {
                                @RequestParam(value = "sort", defaultValue = "NO") String sort
     ) {
         var products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
-        var items = products.stream().map(p -> new Item(p.getId(), p.getName(), p.getDescription(), p.getPrice()));
+        var items = products.stream().map(p -> new Item(p.getId(), p.getName(), p.getDescription(), p.getPrice())); //?
         var paging = new Paging(products.size(), pageNumber, pageSize);
         model.addAttribute("items", items);
         model.addAttribute("paging", paging);
@@ -58,6 +58,13 @@ public class ShopController {
         var item = new Item(product.getId(), product.getName(), product.getDescription(), product.getPrice());
         model.addAttribute("item", item);
         return "item";
+    }
+
+    @GetMapping("/orders")
+    public String showOrders(Model model) {
+        var orders = orderService.findAllOrders();
+        model.addAttribute("orders", orders);
+        return "orders";
     }
 
 }
