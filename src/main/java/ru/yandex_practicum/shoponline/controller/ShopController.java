@@ -17,8 +17,6 @@ import ru.yandex_practicum.shoponline.model.front.Paging;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 
-import java.util.List;
-
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -84,6 +82,11 @@ public class ShopController {
         model.addAttribute("items", items);
         model.addAttribute("total", cart.getTotalSum());
         return "cart";
+    }
+
+    @GetMapping("/items/add")
+    public String showAddItemForm(Model model) {
+        return "add-item";
     }
 
 }
