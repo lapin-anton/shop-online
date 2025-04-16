@@ -17,6 +17,8 @@ import ru.yandex_practicum.shoponline.model.front.Paging;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 
+import java.util.List;
+
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -67,11 +69,20 @@ public class ShopController {
         return "orders";
     }
 
+    @GetMapping("/order/{orderId}")
+    public String showOrder(Model model, @PathVariable("orderId") Long orderId) {
+        var order = orderService.findOrder(orderId);
+        model.addAttribute("order", order);
+        //model.addAttribute("newOrder", false);
+        return "order";
+    }
+
     @GetMapping("/cart/items")
     public String showCart(Model model) {
         var cart = orderService.getCart();
         var items = cart.getItems();
         model.addAttribute("items", items);
+        model.addAttribute("total", cart.getTotalSum());
         return "cart";
     }
 

@@ -22,5 +22,8 @@ public class OrderService {
         return orderRepository.findByPlacedFalseOrPlacedEmpty().orElseThrow(NoSuchElementException::new);
     }
 
-    //
+    public Order findOrder(Long orderId) {
+        return orderRepository.findById(orderId).orElseThrow(NoSuchElementException::new);
+    }
+
 }
