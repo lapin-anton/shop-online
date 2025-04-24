@@ -38,11 +38,12 @@ public class ShopController {
                                @RequestParam(value = "sort", defaultValue = "NO") String sort
     ) {
         var products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
-        var items = products.stream().map(p -> new Item(p.getId(), p.getName(), p.getDescription(), p.getPrice())); //?
+        var items = products.stream().map(p -> new Item(p.getId(), p.getName(), p.getDescription(), p.getPrice()));
         var paging = new Paging(products.size(), pageNumber, pageSize);
         model.addAttribute("items", items);
         model.addAttribute("paging", paging);
         model.addAttribute("search", search);
+        model.addAttribute("sort", sort);
         return "main";
     }
 

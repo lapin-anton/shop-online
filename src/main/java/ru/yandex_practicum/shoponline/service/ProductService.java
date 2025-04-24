@@ -1,6 +1,7 @@
 package ru.yandex_practicum.shoponline.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,7 +10,6 @@ import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.repository.ProductRepository;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -20,14 +20,17 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     public List<Product> findAllBySearchAndSort(String search, String sort, int pageSize, int pageNumber) {
-        var foundedPage = productRepository.findAllByNameContaining(search, PageRequest.of(pageNumber - 1, pageSize));
-        var foundedList = foundedPage.toList();
+        Page<Product> foundedPage;
         if (sort.equals("ALPHA")) {
-            foundedList.sort(Comparator.comparing(Product::getName));
+            foundedPage = productRepository
+                    .findAllByNameContainingOrderByName(search, PageRequest.of(pageNumber - 1, pageSize));
         } else if (sort.equals("PRICE")) {
-            foundedList.sort(Comparator.comparing(Product::getPrice));
+            foundedPage = productRepository
+                    .findAllByNameContainingOrderByPrice(search, PageRequest.of(pageNumber - 1, pageSize));
+        } else {
+            foundedPage = productRepository.findAllByNameContaining(search, PageRequest.of(pageNumber - 1, pageSize));
         }
-        return foundedList;
+        return foundedPage.toList();
     }
 
     public Product findById(Long productId) {

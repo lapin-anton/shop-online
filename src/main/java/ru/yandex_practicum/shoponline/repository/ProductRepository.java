@@ -15,4 +15,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findAllByNameContaining(String search, Pageable pageable);
 
+    Page<Product> findAllByNameContainingOrderByName(String search, Pageable pageable);
+
+    Page<Product> findAllByNameContainingOrderByPrice(String search, Pageable pageable);
+
 }
