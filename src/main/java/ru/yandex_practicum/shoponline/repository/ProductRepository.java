@@ -1,5 +1,6 @@
 package ru.yandex_practicum.shoponline.repository;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,6 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @Query("select p from Product p where p.name like :search")
-    List<Product> findAllByName(@Param("search") String search, Pageable pageable);
+    Page<Product> findAllByNameContaining(String search, Pageable pageable);
+
 }

@@ -11,11 +11,15 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import ru.yandex_practicum.shoponline.model.front.Item;
 import ru.yandex_practicum.shoponline.model.front.Paging;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
+
+import java.io.IOException;
 
 @Slf4j
 @Controller
@@ -87,6 +91,17 @@ public class ShopController {
     @GetMapping("/items/add")
     public String showAddItemForm(Model model) {
         return "add-item";
+    }
+
+    @PostMapping("/saveItem")
+    public String saveNewItem(
+            @RequestParam("name") String name,
+            @RequestParam(value = "image") MultipartFile image,
+            @RequestParam("description") String description,
+            @RequestParam("price") double price
+    ) throws IOException {
+        productService.addNewProduct(name, image, description, price);
+        return "redirect:/";
     }
 
 }

@@ -19,7 +19,7 @@ public class OrderService {
     }
 
     public Order getCart() {
-        return orderRepository.findByPlacedFalseOrPlacedEmpty().orElseThrow(NoSuchElementException::new);
+        return orderRepository.findByCreatedAtIsNull().orElseThrow(NoSuchElementException::new);
     }
 
     public Order findOrder(Long orderId) {

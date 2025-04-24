@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 @Getter
@@ -27,7 +28,8 @@ public class Order {
     @Column(name = "total_sum")
     private Double totalSum;
 
-    private Boolean placed;
+    @Column(name = "created_at")
+    private Timestamp createdAt;
 
     @ManyToMany
     @JoinTable(name = "items_orders",

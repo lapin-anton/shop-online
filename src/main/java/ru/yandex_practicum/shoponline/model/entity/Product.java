@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
@@ -16,6 +17,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "products")
+@NoArgsConstructor
 public class Product implements Serializable {
 
     @Id
@@ -30,7 +32,14 @@ public class Product implements Serializable {
 
     private Double price;
 
-    @OneToMany(mappedBy = "products")
+    @OneToMany(mappedBy = "product")
     private List<Item> items;
+
+    public Product(String name, String description, byte[] image, Double price) {
+        this.name = name;
+        this.description = description;
+        this.image = image;
+        this.price = price;
+    }
 
 }
