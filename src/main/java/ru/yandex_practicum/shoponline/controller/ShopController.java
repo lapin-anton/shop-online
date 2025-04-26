@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex_practicum.shoponline.model.entity.Item;
+import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.model.front.ItemDto;
 import ru.yandex_practicum.shoponline.model.front.Paging;
 import ru.yandex_practicum.shoponline.service.ItemService;
@@ -68,25 +69,12 @@ public class ShopController {
 
     @Transactional
     @PostMapping("/main/item/{itemId}")
-    public String changeItemCount(
+    public String changeItemCountOnMain(
             @PathVariable("itemId") Long itemId,
             @RequestParam("action") String action
     ) {
         var cart = orderService.getCart();
-        var item = cart.getItems().stream().filter(it -> it.getProduct().getId().equals(itemId)).findFirst()
-                .orElse(new ru.yandex_practicum.shoponline.model.entity.Item());
-        if (item.getProduct() == null) {
-            var product = productService.findById(itemId);
-            item.setProduct(product);
-            item.setCount(0);
-            item = itemService.saveItem(item);
-            cart.getItems().add(item);
-        }
-        item.setCount(action.equals("plus") ? item.getCount() + 1 : item.getCount() - 1);
-        if (item.getCount() == 0) {
-            itemService.deleteItem(item);
-            cart.getItems().remove(item);
-        }
+        updateCartItems(itemId, action, cart);
         orderService.saveCart(cart);
         return "redirect:/";
     }
@@ -99,6 +87,18 @@ public class ShopController {
                 cartItemMap.containsKey(product.getId()) ? cartItemMap.get(product.getId()).getCount() : 0);
         model.addAttribute("item", item);
         return "item";
+    }
+
+    @Transactional
+    @PostMapping("/item/{itemId}")
+    public String changeItemCount(
+            @PathVariable("itemId") Long itemId,
+            @RequestParam("action") String action
+    ) {
+        var cart = orderService.getCart();
+        updateCartItems(itemId, action, cart);
+        orderService.saveCart(cart);
+        return "redirect:/item/" + itemId;
     }
 
     @GetMapping("/orders")
@@ -139,6 +139,23 @@ public class ShopController {
     ) throws IOException {
         productService.addNewProduct(name, image, description, price);
         return "redirect:/";
+    }
+
+    private void updateCartItems(Long itemId, String action, Order cart) {
+        var item = cart.getItems().stream().filter(it -> it.getProduct().getId().equals(itemId)).findFirst()
+                .orElse(new Item());
+        if (item.getProduct() == null) {
+            var product = productService.findById(itemId);
+            item.setProduct(product);
+            item.setCount(0);
+            item = itemService.saveItem(item);
+            cart.getItems().add(item);
+        }
+        item.setCount(action.equals("plus") ? item.getCount() + 1 : item.getCount() - 1);
+        if (item.getCount() == 0) {
+            itemService.deleteItem(item);
+            cart.getItems().remove(item);
+        }
     }
 
     private HashMap<Long, Item> getCartItemMap() {
