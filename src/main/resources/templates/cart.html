@@ -18,7 +18,7 @@
             <table>
                 <tr>
                     <td>
-                        <img width="300" height="300" th:src="${'http://localhost:8080/'+item.getProduct().getId()}">
+                        <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProduct().getId()}">
                     </td>
                 </tr>
                 <tr>
@@ -32,8 +32,8 @@
                 <tr><td th:text="${item.getProduct().getDescription()}"></td></tr>
                 <tr>
                     <td>
-                        <form th:action="${'/cart/items/'+item.getId()}" method="post">
-                            <button name="action" value="minus">-</button>
+                        <form th:action="${'/cart/item/'+item.getProduct().getId()}" method="post">
+                            <button th:if="${item.getCount() > 0}" name="action" value="minus">-</button>
                             <span th:text="${item.getCount()}"></span>
                             <button name="action" value="plus">+</button>
                             <button name="action" value="delete" style="float:right;">&cross;</button>
@@ -50,7 +50,7 @@
     </tr>
     <tr>
         <td style="text-align:right">
-            <form action="/buy" method="post" th:if="${!empty}">
+            <form action="/buy" method="post" th:if="${!items.isEmpty()}">
                 <button>Купить</button>
             </form>
         </td>

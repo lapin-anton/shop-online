@@ -6,6 +6,9 @@ import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.repository.OrderRepository;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -49,4 +52,8 @@ public class OrderService {
         return sum;
     }
 
+    public void createOrder(Order cart) {
+        cart.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        orderRepository.save(cart);
+    }
 }

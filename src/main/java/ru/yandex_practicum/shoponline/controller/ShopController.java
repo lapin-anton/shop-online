@@ -125,6 +125,26 @@ public class ShopController {
         return "cart";
     }
 
+    @Transactional
+    @PostMapping("/cart/item/{itemId}")
+    public String changeItemCountOnCart(
+            @PathVariable("itemId") Long itemId,
+            @RequestParam("action") String action
+    ) {
+        var cart = orderService.getCart();
+        updateCartItems(itemId, action, cart);
+        orderService.saveCart(cart);
+        return "redirect:/cart/items";
+    }
+
+    @Transactional
+    @PostMapping("/buy")
+    public String buy() {
+        var cart = orderService.getCart();
+        orderService.createOrder(cart);
+        return "redirect:/";
+    }
+
     @GetMapping("/items/add")
     public String showAddItemForm(Model model) {
         return "add-item";
@@ -152,7 +172,7 @@ public class ShopController {
             cart.getItems().add(item);
         }
         item.setCount(action.equals("plus") ? item.getCount() + 1 : item.getCount() - 1);
-        if (item.getCount() == 0) {
+        if (action.equals("delete") || item.getCount() == 0) {
             itemService.deleteItem(item);
             cart.getItems().remove(item);
         }
