@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Item {
+public class ItemDto {
 
     private Long id;
 
@@ -17,10 +17,11 @@ public class Item {
 
     private int count;
 
-    public Item(Long id, String name, String description, Double price) {
+    public ItemDto(Long id, String name, String description, Double price, int count) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.price = price;
+        this.count = count;
     }
 }

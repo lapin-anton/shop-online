@@ -38,10 +38,6 @@ public class ProductService {
                 .orElseThrow(NoSuchElementException::new);
     }
 
-    public Product findProductById(Long itemId) {
-        return productRepository.findById(itemId).orElseThrow(NoSuchElementException::new);
-    }
-
     @Transactional
     public void addNewProduct(String name, MultipartFile image, String description, double price) throws IOException {
         var product = new Product(name, description, image.getBytes(), price);

@@ -8,18 +8,22 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import ru.yandex_practicum.shoponline.model.front.Item;
+import ru.yandex_practicum.shoponline.model.entity.Item;
+import ru.yandex_practicum.shoponline.model.front.ItemDto;
 import ru.yandex_practicum.shoponline.model.front.Paging;
+import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 @Slf4j
 @Controller
@@ -30,6 +34,8 @@ public class ShopController {
 
     private final OrderService orderService;
 
+    private final ItemService itemService;
+
     @GetMapping("/")
     public String showMainPage(Model model,
                                @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
@@ -38,7 +44,10 @@ public class ShopController {
                                @RequestParam(value = "sort", defaultValue = "NO") String sort
     ) {
         var products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
-        var items = products.stream().map(p -> new Item(p.getId(), p.getName(), p.getDescription(), p.getPrice()));
+        var cartItemMap = getCartItemMap();
+        var items = products.stream().map(p ->
+                new ItemDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), cartItemMap.containsKey(p.getId()) ?
+                        cartItemMap.get(p.getId()).getCount() : 0));
         var paging = new Paging(products.size(), pageNumber, pageSize);
         model.addAttribute("items", items);
         model.addAttribute("paging", paging);
@@ -57,10 +66,37 @@ public class ShopController {
                 .body(new ByteArrayResource(product.getImage()));
     }
 
+    @Transactional
+    @PostMapping("/main/item/{itemId}")
+    public String changeItemCount(
+            @PathVariable("itemId") Long itemId,
+            @RequestParam("action") String action
+    ) {
+        var cart = orderService.getCart();
+        var item = cart.getItems().stream().filter(it -> it.getProduct().getId().equals(itemId)).findFirst()
+                .orElse(new ru.yandex_practicum.shoponline.model.entity.Item());
+        if (item.getProduct() == null) {
+            var product = productService.findById(itemId);
+            item.setProduct(product);
+            item.setCount(0);
+            item = itemService.saveItem(item);
+            cart.getItems().add(item);
+        }
+        item.setCount(action.equals("plus") ? item.getCount() + 1 : item.getCount() - 1);
+        if (item.getCount() == 0) {
+            itemService.deleteItem(item);
+            cart.getItems().remove(item);
+        }
+        orderService.saveCart(cart);
+        return "redirect:/";
+    }
+
     @GetMapping("/item/{itemId}")
     public String showItem(Model model, @PathVariable("itemId") Long itemId) {
-        var product = productService.findProductById(itemId);
-        var item = new Item(product.getId(), product.getName(), product.getDescription(), product.getPrice());
+        var product = productService.findById(itemId);
+        var cartItemMap = getCartItemMap();
+        var item = new ItemDto(product.getId(), product.getName(), product.getDescription(), product.getPrice(),
+                cartItemMap.containsKey(product.getId()) ? cartItemMap.get(product.getId()).getCount() : 0);
         model.addAttribute("item", item);
         return "item";
     }
@@ -103,6 +139,15 @@ public class ShopController {
     ) throws IOException {
         productService.addNewProduct(name, image, description, price);
         return "redirect:/";
+    }
+
+    private HashMap<Long, Item> getCartItemMap() {
+        var cart = orderService.getCart();
+        var productsMap = new HashMap<Long, Item>();
+        for (var item: cart.getItems()) {
+            productsMap.put(item.getProduct().getId(), item);
+        }
+        return productsMap;
     }
 
 }
