@@ -51,8 +51,8 @@ public class OrderService {
         return sum;
     }
 
-    public void createOrder(Order cart) {
-        cart.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
-        orderRepository.save(cart);
+    public void createOrder(Order newOrder) {
+        newOrder.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        orderRepository.save(newOrder);
     }
 }
