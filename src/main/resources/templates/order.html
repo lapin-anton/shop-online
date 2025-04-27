@@ -12,7 +12,7 @@
 <a href="/cart/items" style="float:right;">
     <b>КОРЗИНА &cudarrr;</b>
 </a>
-<a href="/main/items" style="float:right;">
+<a href="/" style="float:right;">
     <b>ГЛАВНАЯ &cudarrr;</b>
 </a>
 <h1 style="text-align:center" th:if="${newOrder}">Поздравляем! Успешная покупка! &#128578;</h1>
@@ -28,7 +28,7 @@
                 <tr>
                     <td>
                         <a th:href="${'/items/'+item.getId()}">
-                            <img width="300" height="300" th:src="${'http://localhost:8080/'+item.getProduct().getId()}">
+                            <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProduct().getId()}">
                         </a>
                     </td>
                 </tr>

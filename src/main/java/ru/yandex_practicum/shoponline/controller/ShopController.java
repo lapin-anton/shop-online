@@ -108,11 +108,13 @@ public class ShopController {
         return "orders";
     }
 
-    @GetMapping("/order/{orderId}")
-    public String showOrder(Model model, @PathVariable("orderId") Long orderId) {
+    @GetMapping("/order/{orderId}/{newOrder}")
+    public String showOrder(Model model,
+                            @PathVariable("orderId") Long orderId,
+                            @PathVariable("newOrder") String newOrder) {
         var order = orderService.findOrder(orderId);
         model.addAttribute("order", order);
-        //model.addAttribute("newOrder", false);
+        model.addAttribute("newOrder", "new".equals(newOrder));
         return "order";
     }
 
@@ -142,7 +144,7 @@ public class ShopController {
     public String buy() {
         var cart = orderService.getCart();
         orderService.createOrder(cart);
-        return "redirect:/";
+        return "redirect:/order/" + cart.getId() + "/new";
     }
 
     @GetMapping("/items/add")
