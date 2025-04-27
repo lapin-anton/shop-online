@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.repository.ProductRepository;
@@ -38,7 +37,6 @@ public class ProductService {
                 .orElseThrow(NoSuchElementException::new);
     }
 
-    @Transactional
     public void addNewProduct(String name, MultipartFile image, String description, double price) throws IOException {
         var product = new Product(name, description, image.getBytes(), price);
         productRepository.save(product);

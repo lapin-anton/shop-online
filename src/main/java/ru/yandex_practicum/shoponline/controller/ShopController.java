@@ -152,6 +152,7 @@ public class ShopController {
         return "add-item";
     }
 
+    @Transactional
     @PostMapping("/saveItem")
     public String saveNewItem(
             @RequestParam("name") String name,

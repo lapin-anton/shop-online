@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,9 +16,10 @@ import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@EqualsAndHashCode(exclude = "items")
 @Entity
 @Table(name = "products")
-@NoArgsConstructor
 public class Product implements Serializable {
 
     @Id
