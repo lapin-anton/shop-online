@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
-import ru.yandex_practicum.shoponline.model.front.ItemDto;
-import ru.yandex_practicum.shoponline.model.front.Paging;
+import ru.yandex_practicum.shoponline.model.dto.ItemDto;
+import ru.yandex_practicum.shoponline.model.other.Paging;
 import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
@@ -58,7 +58,7 @@ public class ShopController {
     }
 
     @GetMapping("/images/{productId}")
-    public ResponseEntity<Resource> downloadImage(@PathVariable("productId") Long productId) throws Exception {
+    public ResponseEntity<Resource> downloadImage(@PathVariable("productId") Long productId) {
         var product = productService.findById(productId);
         return ResponseEntity.ok()
                 .headers(new HttpHeaders())

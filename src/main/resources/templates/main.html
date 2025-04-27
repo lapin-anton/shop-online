@@ -18,7 +18,7 @@
     <table style="width:70%;margin-left:auto;margin-right:auto;">
         <tr>
             <td>
-                <!--/*@thymesVar id="paging" type="ru.yandex_practicum.shoponline.model.front.Paging"*/-->
+                <!--/*@thymesVar id="paging" type="ru.yandex_practicum.shoponline.model.other.Paging"*/-->
                 <form>
                     <p>
                         <label for="search">Найти: </label>
@@ -51,7 +51,7 @@
                 </form>
             </td>
         </tr>
-        <!--/*@thymesVar id="item" type="ru.yandex_practicum.shoponline.model.front.ItemDto"*/-->
+        <!--/*@thymesVar id="item" type="ru.yandex_practicum.shoponline.model.dto.ItemDto"*/-->
         <tr th:each="itemsRow : ${items}">
             <td th:each="item : ${itemsRow}">
                 <table>

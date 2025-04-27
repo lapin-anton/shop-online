@@ -1,4 +1,4 @@
-package ru.yandex_practicum.shoponline.model.front;
+package ru.yandex_practicum.shoponline.model.dto;
 
 import lombok.Getter;
 import lombok.Setter;
