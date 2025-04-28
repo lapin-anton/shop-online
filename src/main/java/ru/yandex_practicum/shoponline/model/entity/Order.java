@@ -10,6 +10,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.sql.Timestamp;
@@ -18,6 +19,7 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@NoArgsConstructor
 @Table(name = "orders")
 public class Order {
 
@@ -37,4 +39,12 @@ public class Order {
             inverseJoinColumns = @JoinColumn(name = "item_id"))
     private List<Item> items;
 
+    public Order(Double totalSum) {
+        this.totalSum = totalSum;
+    }
+
+    public Order(Double totalSum, Timestamp createdAt) {
+        this.totalSum = totalSum;
+        this.createdAt = createdAt;
+    }
 }

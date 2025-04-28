@@ -17,7 +17,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@EqualsAndHashCode(exclude = "items")
+@EqualsAndHashCode(exclude = {"id", "items"})
 @Entity
 @Table(name = "products")
 public class Product implements Serializable {
