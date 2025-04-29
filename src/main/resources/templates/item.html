@@ -7,17 +7,17 @@
 
 <body>
     <a href="/orders" style="float:right;">
-        <b>ЗАКАЗЫ &cudarrr;</b>
+        <b>ЗАКАЗЫ &#x2935;</b>
     </a>
     <a href="/cart/items" style="float:right;">
-        <b>КОРЗИНА &cudarrr;</b>
+        <b>КОРЗИНА &#x2935;</b>
     </a>
     <a href="/" style="float:right;">
-        <b>ГЛАВНАЯ &cudarrr;</b>
+        <b>ГЛАВНАЯ &#x2935;</b>
     </a>
     <div style="width:70%;margin-left:auto;margin-right:auto;">
         <p>
-            <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getId()}">
+            <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getId()}"></img>
         </p>
         <p>
             <b th:text="${item.getName()}"></b>

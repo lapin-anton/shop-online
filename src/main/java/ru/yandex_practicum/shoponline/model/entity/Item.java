@@ -38,6 +38,11 @@ public class Item {
             inverseJoinColumns = @JoinColumn(name = "order_id"))
     private List<Order> orders;
 
+    public Item(Product product, Integer count) {
+        this.product = product;
+        this.count = count;
+    }
+
     public Item(Long id, Product product, Integer count) {
         this.id = id;
         this.product = product;
