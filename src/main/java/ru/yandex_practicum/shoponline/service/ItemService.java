@@ -2,6 +2,7 @@ package ru.yandex_practicum.shoponline.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.repository.ItemRepository;
 
@@ -11,11 +12,11 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
 
-    public Item saveItem(Item item) {
+    public Mono<Item> saveItem(Item item) {
         return itemRepository.save(item);
     }
 
-    public void deleteItem(Item item) {
-        itemRepository.delete(item);
+    public Mono<Void> deleteItem(Item item) {
+        return itemRepository.delete(item);
     }
 }

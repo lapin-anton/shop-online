@@ -1,22 +1,18 @@
 package ru.yandex_practicum.shoponline.repository;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 
-import java.util.List;
-
 @Repository
-public interface ProductRepository extends JpaRepository<Product, Long> {
+public interface ProductRepository extends R2dbcRepository<Product, Long> {
 
-    Page<Product> findAllByNameContaining(String search, Pageable pageable);
+    Flux<Product> findAllByNameContaining(String search, Pageable pageable);
 
-    Page<Product> findAllByNameContainingOrderByName(String search, Pageable pageable);
+    Flux<Product> findAllByNameContainingOrderByName(String search, Pageable pageable);
 
-    Page<Product> findAllByNameContainingOrderByPrice(String search, Pageable pageable);
+    Flux<Product> findAllByNameContainingOrderByPrice(String search, Pageable pageable);
 
 }

@@ -2,6 +2,8 @@ package ru.yandex_practicum.shoponline.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.repository.OrderRepository;
@@ -10,7 +12,6 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -18,13 +19,13 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    public List<Order> findAllOrders() {
+    public Flux<Order> findAllOrders() {
         return orderRepository.findAll();
     }
 
-    public Order getCart() {
+    public Mono<Order> getCart() {
         return orderRepository.findByCreatedAtIsNull()
-                .orElse(createNewCart());
+                .defaultIfEmpty(createNewCart());
     }
 
     private Order createNewCart() {
@@ -34,8 +35,8 @@ public class OrderService {
         return cart;
     }
 
-    public Order findOrder(Long orderId) {
-        return orderRepository.findById(orderId).orElseThrow(NoSuchElementException::new);
+    public Mono<Order> findOrder(Long orderId) {
+        return orderRepository.findById(orderId);
     }
 
     public void saveCart(Order cart) {
