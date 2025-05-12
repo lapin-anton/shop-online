@@ -99,15 +99,25 @@ public class ShopController {
 //        return "redirect:/";
 //    }
 //
-//    @GetMapping("/item/{itemId}")
-//    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
-//        var product = productService.findById(itemId);
-//        var cartItemMap = getCartItemMap();
-//        var item = new ItemDto(product.getId(), product.getName(), product.getDescription(), product.getPrice(),
-//                cartItemMap.containsKey(product.getId()) ? cartItemMap.get(product.getId()).getCount() : 0);
-//        model.addAttribute("item", item);
-//        return "item";
-//    }
+    @GetMapping("/item/{itemId}")
+    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
+        Mono<Product> productMono = productService.findById(itemId);
+        Mono<HashMap<Long, Item>> cartItemMap = getCartItemMap();
+        Mono<ItemDto> itemMono = productMono.flatMap(p ->
+                cartItemMap.flatMap(map -> {
+                    Item item = map.get(p.getId());
+                    return Mono.just(new ItemDto(
+                            p.getId(),
+                            p.getName(),
+                            p.getDescription(),
+                            p.getPrice(),
+                            item != null ? item.getCount() : 0
+                    ));
+                })
+        );
+        model.addAttribute("item", itemMono);
+        return "item";
+    }
 //
 //    @Transactional
 //    @PostMapping("/item/{itemId}")
