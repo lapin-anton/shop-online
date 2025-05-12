@@ -23,17 +23,16 @@ public class OrderService {
         return orderRepository.findAll();
     }
 
-//    public Mono<Order> getCart() {
-//        return orderRepository.findByCreatedAtIsNull()
-//                .defaultIfEmpty(createNewCart());
-//    }
+    public Mono<Order> getCart() {
+        return orderRepository.findByCreatedAtIsNull()
+                .defaultIfEmpty(createNewCart());
+    }
 
-//    private Order createNewCart() {
-//        var cart = new Order();
-//        cart.setTotalSum(0.0);
-//        cart.setItems(new ArrayList<>());
-//        return cart;
-//    }
+    private Order createNewCart() {
+        var cart = new Order();
+        cart.setTotalSum(0.0);
+        return cart;
+    }
 //
 //    public Mono<Order> findOrder(Long orderId) {
 //        return orderRepository.findById(orderId);

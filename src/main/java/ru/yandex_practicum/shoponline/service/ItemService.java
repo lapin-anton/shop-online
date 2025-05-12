@@ -12,6 +12,10 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
 
+    public Mono<Item> findById(Long itemId) {
+        return itemRepository.findById(itemId);
+    }
+
     public Mono<Item> saveItem(Item item) {
         return itemRepository.save(item);
     }

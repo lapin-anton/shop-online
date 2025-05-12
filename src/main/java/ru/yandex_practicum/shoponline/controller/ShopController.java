@@ -20,11 +20,13 @@ import org.springframework.web.reactive.result.view.Rendering;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Item;
+import ru.yandex_practicum.shoponline.model.entity.ItemsOrders;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.model.dto.ItemDto;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.model.other.Paging;
 import ru.yandex_practicum.shoponline.service.ItemService;
+import ru.yandex_practicum.shoponline.service.ItemsOrdersService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 
@@ -42,6 +44,8 @@ public class ShopController {
 
     private final ItemService itemService;
 
+    private final ItemsOrdersService itemsOrdersService;
+
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
                                         @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
@@ -51,10 +55,21 @@ public class ShopController {
     ) {
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
         Mono<Long> productCountMono = products.count();
-//        var cartItemMap = getCartItemMap();
-        Flux<ItemDto> items = products.map(p ->
-                new ItemDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), 0));
-        Mono<Paging> paging = productCountMono.map(productCount -> new Paging(productCount, pageNumber, pageSize));
+        Mono<HashMap<Long, Item>> cartItemMap = getCartItemMap();
+        Flux<ItemDto> items = products.flatMap(p ->
+                cartItemMap.flatMap(map -> {
+                    Item item = map.get(p.getId());
+                    return Mono.just(new ItemDto(
+                            p.getId(),
+                            p.getName(),
+                            p.getDescription(),
+                            p.getPrice(),
+                            item != null ? item.getCount() : 0
+                    ));
+                })
+        );
+        Mono<Paging> paging = productCountMono
+                .map(productCount -> new Paging(productCount, pageNumber, pageSize));
         model.addAttribute("items", items);
         model.addAttribute("paging", paging);
         model.addAttribute("search", search);
@@ -186,13 +201,20 @@ public class ShopController {
 //        }
 //    }
 //
-//    private HashMap<Long, Item> getCartItemMap() {
-//        var cart = orderService.getCart();
-//        var productsMap = new HashMap<Long, Item>();
-//        for (var item: cart.getItems()) {
-//            productsMap.put(item.getProduct().getId(), item);
-//        }
-//        return productsMap;
-//    }
+    private Mono<HashMap<Long, Item>> getCartItemMap() {
+        return orderService.getCart()
+                .flatMap(cart -> {
+                    Long cartId = cart.getId();
+                    return itemsOrdersService.findAllItemOrdersByOrderId(cartId)
+                            .flatMap(itemOrder -> itemService.findById(itemOrder.getItemId()))                             .collectList()
+                            .map(items -> {
+                                HashMap<Long, Item> productsMap = new HashMap<>();
+                                for (Item item : items) {
+                                    productsMap.put(item.getProductId(), item);
+                                }
+                                return productsMap;
+                            });
+                });
+    }
 
 }
