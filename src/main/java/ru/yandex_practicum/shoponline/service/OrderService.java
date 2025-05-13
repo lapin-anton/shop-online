@@ -20,7 +20,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     public Flux<Order> findAllOrders() {
-        return orderRepository.findAll();
+        return orderRepository.findByCreatedAtIsNotNull();
     }
 
     public Mono<Order> getCart() {

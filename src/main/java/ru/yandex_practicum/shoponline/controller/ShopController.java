@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.result.view.Rendering;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import ru.yandex_practicum.shoponline.model.dto.OrderDto;
 import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.ItemsOrders;
 import ru.yandex_practicum.shoponline.model.entity.Order;
@@ -32,6 +33,7 @@ import ru.yandex_practicum.shoponline.service.ProductService;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 @Slf4j
 @Controller
@@ -131,12 +133,23 @@ public class ShopController {
 //        return "redirect:/item/" + itemId;
 //    }
 //
-//    @GetMapping("/orders")
-//    public String showOrders(Model model) {
-//        var orders = orderService.findAllOrders();
-//        model.addAttribute("orders", orders);
-//        return "orders";
-//    }
+    @GetMapping("/orders")
+    public Mono<String> showOrders(Model model) {
+        Flux<Order> ordersFlux = orderService.findAllOrders();
+
+        Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
+            Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(order.getId());
+            Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
+                Mono<Product> productMono = productService.findById(item.getProductId());
+                return productMono.map(p -> new ItemDto(item.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+            }).collectList();
+            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
+        });
+
+        model.addAttribute("orders", orderDtoFlux);
+        return Mono.just("orders");
+    }
 //
 //    @GetMapping("/order/{orderId}/{newOrder}")
 //    public String showOrder(Model model,
