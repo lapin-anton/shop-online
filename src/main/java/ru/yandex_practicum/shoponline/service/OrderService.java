@@ -33,10 +33,10 @@ public class OrderService {
         cart.setTotalSum(0.0);
         return cart;
     }
-//
-//    public Mono<Order> findOrder(Long orderId) {
-//        return orderRepository.findById(orderId);
-//    }
+
+    public Mono<Order> findOrder(Long orderId) {
+        return orderRepository.findById(orderId);
+    }
 //
 //    public void saveCart(Order cart) {
 //        cart.setTotalSum(calculateTotalSum(cart.getItems()));

@@ -9,6 +9,8 @@ public class ItemDto {
 
     private Long id;
 
+    private Long productId;
+
     private String name;
 
     private String description;
@@ -17,8 +19,9 @@ public class ItemDto {
 
     private int count;
 
-    public ItemDto(Long id, String name, String description, Double price, int count) {
+    public ItemDto(Long id, Long productId, String name, String description, Double price, int count) {
         this.id = id;
+        this.productId = productId;
         this.name = name;
         this.description = description;
         this.price = price;

@@ -63,6 +63,7 @@ public class ShopController {
                     Item item = map.get(p.getId());
                     return Mono.just(new ItemDto(
                             p.getId(),
+                            p.getId(),
                             p.getName(),
                             p.getDescription(),
                             p.getPrice(),
@@ -110,6 +111,7 @@ public class ShopController {
                     Item item = map.get(p.getId());
                     return Mono.just(new ItemDto(
                             p.getId(),
+                            p.getId(),
                             p.getName(),
                             p.getDescription(),
                             p.getPrice(),
@@ -142,7 +144,7 @@ public class ShopController {
             Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
             Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
                 Mono<Product> productMono = productService.findById(item.getProductId());
-                return productMono.map(p -> new ItemDto(item.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
             }).collectList();
             return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
         });
@@ -150,16 +152,26 @@ public class ShopController {
         model.addAttribute("orders", orderDtoFlux);
         return Mono.just("orders");
     }
-//
-//    @GetMapping("/order/{orderId}/{newOrder}")
-//    public String showOrder(Model model,
-//                            @PathVariable("orderId") Long orderId,
-//                            @PathVariable("newOrder") String newOrder) {
-//        var order = orderService.findOrder(orderId);
-//        model.addAttribute("order", order);
-//        model.addAttribute("newOrder", "new".equals(newOrder));
-//        return "order";
-//    }
+
+    @GetMapping("/order/{orderId}/{newOrder}")
+    public Mono<String> showOrder(Model model,
+                            @PathVariable("orderId") Long orderId,
+                            @PathVariable("newOrder") String newOrder) {
+        Mono<Order> orderMono = orderService.findOrder(orderId);
+
+        Mono<OrderDto> orderDtoMono = orderMono.flatMap(order -> {
+            Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(order.getId());
+            Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
+                Mono<Product> productMono = productService.findById(item.getProductId());
+                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+            }).collectList();
+            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
+        });
+        model.addAttribute("order", orderDtoMono);
+        model.addAttribute("newOrder", "new".equals(newOrder));
+        return Mono.just("order");
+    }
 //
 //    @GetMapping("/cart/items")
 //    public String showCart(Model model) {
@@ -229,7 +241,8 @@ public class ShopController {
                 .flatMap(cart -> {
                     Long cartId = cart.getId();
                     return itemsOrdersService.findAllItemOrdersByOrderId(cartId)
-                            .flatMap(itemOrder -> itemService.findById(itemOrder.getItemId()))                             .collectList()
+                            .flatMap(itemOrder -> itemService.findById(itemOrder.getItemId()))
+                            .collectList()
                             .map(items -> {
                                 HashMap<Long, Item> productsMap = new HashMap<>();
                                 for (Item item : items) {
