@@ -217,10 +217,10 @@ public class ShopController {
 //        return "redirect:/order/" + cart.getId() + "/new";
 //    }
 //
-//    @GetMapping("/items/add")
-//    public String showAddItemForm(Model model) {
-//        return "add-item";
-//    }
+    @GetMapping("/items/add")
+    public Mono<String> showAddItemForm(Model model) {
+        return Mono.just("add-item");
+    }
 //
 //    @Transactional
 //    @PostMapping("/saveItem")
