@@ -172,15 +172,30 @@ public class ShopController {
         model.addAttribute("newOrder", "new".equals(newOrder));
         return Mono.just("order");
     }
-//
-//    @GetMapping("/cart/items")
-//    public String showCart(Model model) {
-//        var cart = orderService.getCart();
-//        var items = cart.getItems();
-//        model.addAttribute("items", items);
-//        model.addAttribute("total", cart.getTotalSum());
-//        return "cart";
-//    }
+
+    @GetMapping("/cart/items")
+    public Mono<String> showCart(Model model) {
+        Mono<Order> cartMono = orderService.getCart();
+        Mono<OrderDto> orderDtoMono = cartMono.flatMap(cart -> {
+            Mono<List<ItemDto>> itemDtoListMono = null;
+            if (cart.getId() != null) {
+                Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(cart.getId());
+                Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+                itemDtoListMono = itemFlux.flatMap(item -> {
+                    Mono<Product> productMono = productService.findById(item.getProductId());
+                    return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+                }).collectList();
+            }
+            if (itemDtoListMono != null) {
+                return itemDtoListMono.map(itemDtoList -> new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), itemDtoList));
+            } else {
+                return Mono.just(new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), List.of()));
+            }
+        });
+        model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
+        model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
+        return Mono.just("cart");
+    }
 //
 //    @Transactional
 //    @PostMapping("/cart/item/{itemId}")
