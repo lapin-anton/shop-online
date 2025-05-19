@@ -5,33 +5,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.reactive.result.view.Rendering;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import ru.yandex_practicum.shoponline.model.dto.ActionDto;
+import ru.yandex_practicum.shoponline.model.dto.ItemDto;
 import ru.yandex_practicum.shoponline.model.dto.OrderDto;
 import ru.yandex_practicum.shoponline.model.entity.Item;
-import ru.yandex_practicum.shoponline.model.entity.ItemsOrders;
 import ru.yandex_practicum.shoponline.model.entity.Order;
-import ru.yandex_practicum.shoponline.model.dto.ItemDto;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.model.other.Paging;
 import ru.yandex_practicum.shoponline.service.ItemService;
-import ru.yandex_practicum.shoponline.service.ItemsOrdersService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -45,8 +41,6 @@ public class ShopController {
     private final OrderService orderService;
 
     private final ItemService itemService;
-
-    private final ItemsOrdersService itemsOrdersService;
 
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
@@ -89,19 +83,16 @@ public class ShopController {
                 .contentType(MediaType.parseMediaType("application/octet-stream"))
                 .body(new ByteArrayResource(product.getImage())));
     }
-//
-//    @Transactional
-//    @PostMapping("/main/item/{itemId}")
-//    public String changeItemCountOnMain(
-//            @PathVariable("itemId") Long itemId,
-//            @RequestParam("action") String action
-//    ) {
-//        var cart = orderService.getCart();
-//        updateCartItems(itemId, action, cart);
-//        orderService.saveCart(cart);
-//        return "redirect:/";
-//    }
-//
+
+    @PostMapping("/main/item/{itemId}")
+    public Mono<String> changeItemCountOnMain(
+            @PathVariable("itemId") Long itemId,
+            @ModelAttribute ActionDto action
+    ) {
+        return orderService.getCart().flatMap(cart -> updateCartItem(itemId, action.getAction()))
+                .flatMap(cart -> Mono.just("redirect:/"));
+    }
+
     @GetMapping("/item/{itemId}")
     public String showItem(Model model, @PathVariable("itemId") Long itemId) {
         Mono<Product> productMono = productService.findById(itemId);
@@ -140,8 +131,7 @@ public class ShopController {
         Flux<Order> ordersFlux = orderService.findAllOrders();
 
         Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
-            Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(order.getId());
-            Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
             Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
                 Mono<Product> productMono = productService.findById(item.getProductId());
                 return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
@@ -160,8 +150,7 @@ public class ShopController {
         Mono<Order> orderMono = orderService.findOrder(orderId);
 
         Mono<OrderDto> orderDtoMono = orderMono.flatMap(order -> {
-            Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(order.getId());
-            Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
             Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
                 Mono<Product> productMono = productService.findById(item.getProductId());
                 return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
@@ -179,8 +168,7 @@ public class ShopController {
         Mono<OrderDto> orderDtoMono = cartMono.flatMap(cart -> {
             Mono<List<ItemDto>> itemDtoListMono = null;
             if (cart.getId() != null) {
-                Flux<ItemsOrders> itemsOrdersFlux = itemsOrdersService.findAllItemOrdersByOrderId(cart.getId());
-                Flux<Item> itemFlux = itemsOrdersFlux.flatMap(itor -> itemService.findById(itor.getItemId()));
+                Flux<Item> itemFlux = itemService.findByOrderId(cart.getId());
                 itemDtoListMono = itemFlux.flatMap(item -> {
                     Mono<Product> productMono = productService.findById(item.getProductId());
                     return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
@@ -189,7 +177,7 @@ public class ShopController {
             if (itemDtoListMono != null) {
                 return itemDtoListMono.map(itemDtoList -> new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), itemDtoList));
             } else {
-                return Mono.just(new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), List.of()));
+                return Mono.just(new OrderDto(null, cart.getTotalSum(), cart.getCreatedAt(), List.of()));
             }
         });
         model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
@@ -234,29 +222,37 @@ public class ShopController {
 //        return "redirect:/";
 //    }
 //
-//    private void updateCartItems(Long itemId, String action, Order cart) {
-//        var item = cart.getItems().stream().filter(it -> it.getProduct().getId().equals(itemId)).findFirst()
-//                .orElse(new Item());
-//        if (item.getProduct() == null) {
-//            var product = productService.findById(itemId);
-//            item.setProduct(product);
-//            item.setCount(0);
-//            item = itemService.saveItem(item);
-//            cart.getItems().add(item);
-//        }
-//        item.setCount(action.equals("plus") ? item.getCount() + 1 : item.getCount() - 1);
-//        if (action.equals("delete") || item.getCount() == 0) {
-//            itemService.deleteItem(item);
-//            cart.getItems().remove(item);
-//        }
-//    }
-//
+    private Mono<Order> updateCartItem(Long productId, String action) {
+        return orderService.getCart().flatMap(cart ->
+            itemService.findByOrderId(cart.getId())
+                .filter(it -> it.getProductId().equals(productId))
+                .next()
+                .flatMap(it -> itemService.updateItemQuantity(action, it))
+                .switchIfEmpty(
+                    Mono.defer(() -> {
+                        Item item = new Item();
+                        item.setProductId(productId);
+                        item.setOrderId(cart.getId());
+                        item.setCount(1);
+                        return itemService.saveItem(item).then(Mono.just(item));
+                    })
+                ).flatMap(it ->
+                    itemService.findByOrderId(cart.getId())
+                        .flatMap(item -> {
+                            Mono<Product> productMono = productService.findById(item.getProductId());
+                            return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+                        })
+                        .collectList()
+                        .flatMap(itemDtos -> orderService.saveCart(cart, itemDtos))
+                )
+        );
+    }
+
     private Mono<HashMap<Long, Item>> getCartItemMap() {
         return orderService.getCart()
                 .flatMap(cart -> {
                     Long cartId = cart.getId();
-                    return itemsOrdersService.findAllItemOrdersByOrderId(cartId)
-                            .flatMap(itemOrder -> itemService.findById(itemOrder.getItemId()))
+                    return itemService.findByOrderId(cartId)
                             .collectList()
                             .map(items -> {
                                 HashMap<Long, Item> productsMap = new HashMap<>();

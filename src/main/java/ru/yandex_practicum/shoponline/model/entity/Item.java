@@ -19,6 +19,9 @@ public class Item {
     @Column("product_id")
     private Long productId;
 
+    @Column("order_id")
+    private Long orderId;
+
     private Integer count;
 
     public Item(Integer count) {
