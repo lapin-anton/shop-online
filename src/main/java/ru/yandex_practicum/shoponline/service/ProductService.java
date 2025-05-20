@@ -3,13 +3,10 @@ package ru.yandex_practicum.shoponline.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.repository.ProductRepository;
-
-import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +32,8 @@ public class ProductService {
         return productRepository.findById(productId);
     }
 
-    public void addNewProduct(String name, MultipartFile image, String description, double price) throws IOException {
-        var product = new Product(name, description, image.getBytes(), price);
-        productRepository.save(product);
+    public Mono<Product> saveNewProduct(Product product) {
+        return productRepository.save(product);
     }
 
 }

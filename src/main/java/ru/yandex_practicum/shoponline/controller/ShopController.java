@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.dto.ActionDto;
@@ -27,6 +31,7 @@ import ru.yandex_practicum.shoponline.model.other.Paging;
 import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
+import ru.yandex_practicum.shoponline.util.CsvParserUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -205,19 +210,17 @@ public class ShopController {
     public Mono<String> showAddItemForm(Model model) {
         return Mono.just("add-item");
     }
-//
-//    @Transactional
-//    @PostMapping("/saveItem")
-//    public String saveNewItem(
-//            @RequestParam("name") String name,
-//            @RequestParam(value = "image") MultipartFile image,
-//            @RequestParam("description") String description,
-//            @RequestParam("price") double price
-//    ) throws IOException {
-//        productService.addNewProduct(name, image, description, price);
-//        return "redirect:/";
-//    }
-//
+
+    @Transactional
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
+        return fileMono.flux()
+                .flatMap(CsvParserUtil::parseCsv)
+                .flatMap(productService::saveNewProduct)
+                .collectList()
+                .flatMap(products -> Mono.just("redirect:/"));
+    }
+
     private Mono<Order> updateCartItem(Long productId, String action) {
         return orderService.getCart()
                 .flatMap(orderService::saveNewCart)

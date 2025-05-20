@@ -51,6 +51,11 @@
             <groupId>org.postgresql</groupId>
             <artifactId>r2dbc-postgresql</artifactId>
         </dependency>
+        <dependency>
+            <groupId>de.siegmar</groupId>
+            <artifactId>fastcsv</artifactId>
+            <version>1.0.3</version>
+        </dependency>
     </dependencies>
 
     <build>
