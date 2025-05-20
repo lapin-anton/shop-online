@@ -5,12 +5,12 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.dto.ItemDto;
-import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.repository.OrderRepository;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,10 @@ public class OrderService {
     }
 
     public Mono<Order> getCart() {
-        return orderRepository.findByCreatedAtIsNull()
+        Mono<Order> cart = orderRepository.findByCreatedAtIsNull();
+
+        return cart
+                .flatMap(Mono::just)
                 .defaultIfEmpty(createNewCart());
     }
 
@@ -31,6 +34,10 @@ public class OrderService {
         var cart = new Order();
         cart.setTotalSum(0.0);
         return cart;
+    }
+
+    public Mono<Order> saveNewCart(Order cart) {
+        return orderRepository.save(cart);
     }
 
     public Mono<Order> findOrder(Long orderId) {
@@ -49,9 +56,10 @@ public class OrderService {
         }
         return sum;
     }
-//
-//    public void createOrder(Order newOrder) {
-//        newOrder.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
-//        orderRepository.save(newOrder);
-//    }
+
+    public Mono<Order> createNewOrder(Order newOrder) {
+        newOrder.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
+        return orderRepository.save(newOrder);
+    }
+
 }
