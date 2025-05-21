@@ -32,4 +32,10 @@ public class Item {
         this.id = id;
         this.count = count;
     }
+
+    public Item(Long productId, Long orderId, Integer count) {
+        this.productId = productId;
+        this.orderId = orderId;
+        this.count = count;
+    }
 }

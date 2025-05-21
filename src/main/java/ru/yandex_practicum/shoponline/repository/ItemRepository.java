@@ -9,8 +9,6 @@ import ru.yandex_practicum.shoponline.model.entity.Item;
 @Repository
 public interface ItemRepository extends R2dbcRepository<Item, Long> {
 
-    Mono<Item> findByIdAndProductId(Long id, Long productId);
-
     Flux<Item> findAllByOrderId(Long orderId);
 
 }
