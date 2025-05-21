@@ -29,9 +29,9 @@ class ItemServiceIntegrationTest extends ShopOnlineApplicationTests {
 
     @BeforeEach
     void setUp() {
-        itemRepository.deleteAll();
-        orderRepository.deleteAll();
-        productRepository.deleteAll();
+        itemRepository.deleteAll().block();
+        orderRepository.deleteAll().block();
+        productRepository.deleteAll().block();
     }
 
     @Test

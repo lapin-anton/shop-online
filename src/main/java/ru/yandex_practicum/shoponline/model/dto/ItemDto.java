@@ -27,4 +27,9 @@ public class ItemDto {
         this.price = price;
         this.count = count;
     }
+
+    public ItemDto(Double price, int count) {
+        this.price = price;
+        this.count = count;
+    }
 }
