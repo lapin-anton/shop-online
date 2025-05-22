@@ -1,25 +1,21 @@
 package ru.yandex_practicum.shoponline.service;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import ru.yandex_practicum.shoponline.model.entity.Item;
+import reactor.core.publisher.Mono;
+import ru.yandex_practicum.shoponline.model.dto.ItemDto;
 import ru.yandex_practicum.shoponline.model.entity.Order;
-import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.repository.OrderRepository;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,82 +34,119 @@ class OrderServiceTest {
     }
 
     @Test
-    void getCart_shouldGetCart() {
-        var expected = new Order();
-        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Optional.of(expected));
+    void getCart_shouldReturnExistingCart() {
+        Order existingCart = new Order();
+        existingCart.setTotalSum(0.0);
 
-        var cart = orderService.getCart();
+        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Mono.just(existingCart));
 
-        assertEquals(expected, cart);
+        Mono<Order> cart = orderService.getCart();
+
+        cart.subscribe(result -> {
+            assertNotNull(result);
+            assertEquals(existingCart.getTotalSum(), result.getTotalSum());
+        });
+
         verify(orderRepository, times(1)).findByCreatedAtIsNull();
     }
 
     @Test
-    void getCart_shouldGetNewCartWhenNotFound() {
-        var expected = new Order();
-        expected.setTotalSum(0.0);
-        expected.setItems(new ArrayList<>());
-        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Optional.empty());
+    void getCart_shouldCreateNewCartIfNoneExists() {
+        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Mono.empty());
 
-        var cart = orderService.getCart();
+        Mono<Order> cart = orderService.getCart();
 
-        assertEquals(expected.getTotalSum(), cart.getTotalSum());
-        assertEquals(expected.getItems().size(), cart.getItems().size());
-        assertNull(cart.getCreatedAt());
+        cart.subscribe(result -> {
+            assertNotNull(result);
+            assertEquals(0.0, result.getTotalSum());
+        });
+
         verify(orderRepository, times(1)).findByCreatedAtIsNull();
     }
 
     @Test
-    void findOrder_shouldGetOrderById() {
-        var expected = new Order();
-        expected.setId(1L);
-        expected.setTotalSum(2000.00);
-        expected.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
-        expected.setItems(List.of(new Item(1L, new Product(), 3)));
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(expected));
+    void saveNewCart_shouldSaveCart() {
+        Order cart = new Order();
+        cart.setTotalSum(0.0);
 
-        var order = orderService.findOrder(1L);
+        when(orderRepository.save(any(Order.class))).thenReturn(Mono.just(cart));
 
-        assertEquals(expected.getId(), order.getId());
-        assertEquals(expected.getTotalSum(), order.getTotalSum());
-        assertEquals(expected.getCreatedAt(), order.getCreatedAt());
-        assertEquals(expected.getItems().size(), order.getItems().size());
-        assertEquals(expected.getItems().get(0).getId(), order.getItems().get(0).getId());
-        assertEquals(expected.getItems().get(0).getProduct(), order.getItems().get(0).getProduct());
-        assertEquals(expected.getItems().get(0).getCount(), order.getItems().get(0).getCount());
-        verify(orderRepository, times(1)).findById(1L);
-    }
+        Mono<Order> savedCart = orderService.saveNewCart(cart);
 
-    @Test
-    void findOrder_shouldReturnExceptionWhenNotFound() {
-        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(
-                NoSuchElementException.class,
-                () -> orderService.findOrder(1L),
-                "Expected findOrder() to throw, but it didn't"
-        );
-
-        verify(orderRepository, times(1)).findById(1L);
-    }
-
-    @Test
-    void saveCart_shouldSaveCart() {
-        var cart = new Order();
-        cart.setItems(List.of());
-
-        orderService.saveCart(cart);
+        savedCart.subscribe(result -> {
+            assertNotNull(result);
+            assertEquals(cart.getTotalSum(), result.getTotalSum());
+        });
 
         verify(orderRepository, times(1)).save(cart);
     }
 
     @Test
-    void createOrder_shouldSaveNewOrder() {
-        var order = new Order();
+    void findOrder_shouldReturnOrder() {
+        Long orderId = 1L;
+        Order order = new Order();
 
-        orderService.createOrder(order);
+        when(orderRepository.findById(orderId)).thenReturn(Mono.just(order));
 
-        verify(orderRepository, times(1)).save(order);
+        Mono<Order> foundOrder = orderService.findOrder(orderId);
+
+        foundOrder.subscribe(result -> {
+            assertNotNull(result);
+            assertEquals(order, result);
+        });
+
+        verify(orderRepository, times(1)).findById(orderId);
+    }
+
+    @Test
+    void findOrder_shouldReturnEmptyWhenOrderNotFound() {
+        Long orderId = 1L;
+
+        when(orderRepository.findById(orderId)).thenReturn(Mono.empty());
+
+        Mono<Order> foundOrder = orderService.findOrder(orderId);
+
+        foundOrder.subscribe(Assertions::assertNull);
+
+        verify(orderRepository, times(1)).findById(orderId);
+    }
+
+    @Test
+    void saveCart_shouldSaveUpdatedCart() {
+        Order cart = new Order();
+        cart.setTotalSum(0.0);
+
+        ItemDto item1 = new ItemDto(10.0, 2);
+        ItemDto item2 = new ItemDto(5.0, 3);
+
+        List<ItemDto> cartItems = List.of(item1, item2);
+
+        when(orderRepository.save(any(Order.class))).thenReturn(Mono.just(cart));
+
+        Mono<Order> updatedCart = orderService.saveCart(cart, cartItems);
+
+        updatedCart.subscribe(result -> {
+            assertNotNull(result);
+            assertEquals(35.0, result.getTotalSum());
+        });
+
+        verify(orderRepository, times(1)).save(cart);
+    }
+
+    @Test
+    void createNewOrder_shouldSaveOrderWithTimestamp() {
+        Order newOrder = new Order();
+        when(orderRepository.save(any(Order.class))).thenReturn(Mono.just(newOrder));
+
+        Mono<Order> createdOrder = orderService.createNewOrder(newOrder);
+
+        createdOrder.subscribe(result -> {
+            assertNotNull(result);
+            assertNotNull(result.getCreatedAt());
+            assertEquals(newOrder.getCreatedAt(), result.getCreatedAt());
+        });
+
+        verify(orderRepository, times(1)).save(newOrder);
     }
 
 }
