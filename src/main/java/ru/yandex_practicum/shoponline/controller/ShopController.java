@@ -26,6 +26,7 @@ import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 import ru.yandex_practicum.shoponline.model.other.Paging;
+import ru.yandex_practicum.shoponline.service.CartService;
 import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.ProductService;
@@ -45,6 +46,10 @@ public class ShopController {
 
     private final ItemService itemService;
 
+    private final CartService cartService;
+
+    private final CsvParserUtil csvParserUtil;
+
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
                                         @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
@@ -54,7 +59,7 @@ public class ShopController {
     ) {
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
         Mono<Long> productCountMono = products.count();
-        Mono<HashMap<Long, Item>> cartItemMap = getCartItemMap();
+        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
         Flux<ItemDto> items = products.flatMap(p ->
                 cartItemMap.flatMap(map -> {
                     Item item = map.get(p.getId());
@@ -92,14 +97,14 @@ public class ShopController {
             @PathVariable("itemId") Long itemId,
             @ModelAttribute ActionDto action
     ) {
-        return orderService.getCart().flatMap(cart -> updateCartItem(itemId, action.getAction()))
+        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
                 .flatMap(cart -> Mono.just("redirect:/"));
     }
 
     @GetMapping("/item/{itemId}")
     public String showItem(Model model, @PathVariable("itemId") Long itemId) {
         Mono<Product> productMono = productService.findById(itemId);
-        Mono<HashMap<Long, Item>> cartItemMap = getCartItemMap();
+        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
         Mono<ItemDto> itemMono = productMono.flatMap(p ->
                 cartItemMap.flatMap(map -> {
                     Item item = map.get(p.getId());
@@ -123,7 +128,7 @@ public class ShopController {
             @PathVariable("itemId") Long itemId,
             @ModelAttribute ActionDto action
     ) {
-        return orderService.getCart().flatMap(cart -> updateCartItem(itemId, action.getAction()))
+        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
                 .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
     }
 
@@ -192,7 +197,7 @@ public class ShopController {
             @PathVariable("itemId") Long itemId,
             @ModelAttribute ActionDto action
     ) {
-        return orderService.getCart().flatMap(cart -> updateCartItem(itemId, action.getAction()))
+        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
                 .flatMap(cart -> Mono.just("redirect:/cart/items"));
     }
 
@@ -213,53 +218,10 @@ public class ShopController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
         return fileMono.flux()
-                .flatMap(CsvParserUtil::parseCsv)
+                .flatMap(csvParserUtil::parseCsv)
                 .flatMap(productService::saveNewProduct)
                 .collectList()
                 .flatMap(products -> Mono.just("redirect:/"));
-    }
-
-    private Mono<Order> updateCartItem(Long productId, String action) {
-        return orderService.getCart()
-                .flatMap(orderService::saveNewCart)
-                .flatMap(cart -> itemService.findByOrderId(cart.getId())
-                .filter(it -> it.getProductId().equals(productId))
-                .next()
-                .flatMap(it -> itemService.updateItemQuantity(action, it))
-                .switchIfEmpty(
-                    Mono.defer(() -> {
-                        Item item = new Item();
-                        item.setProductId(productId);
-                        item.setOrderId(cart.getId());
-                        item.setCount(1);
-                        return itemService.saveItem(item).then(Mono.just(item));
-                    })
-                ).flatMap(it ->
-                    itemService.findByOrderId(cart.getId())
-                        .flatMap(item -> {
-                            Mono<Product> productMono = productService.findById(item.getProductId());
-                            return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
-                        })
-                        .collectList()
-                        .flatMap(itemDtos -> orderService.saveCart(cart, itemDtos))
-                )
-        );
-    }
-
-    private Mono<HashMap<Long, Item>> getCartItemMap() {
-        return orderService.getCart()
-            .flatMap(cart -> {
-                Long cartId = cart.getId();
-                return itemService.findByOrderId(cartId)
-                    .collectList()
-                    .map(items -> {
-                        HashMap<Long, Item> productsMap = new HashMap<>();
-                        for (Item item : items) {
-                            productsMap.put(item.getProductId(), item);
-                        }
-                        return productsMap;
-                    });
-            });
     }
 
 }

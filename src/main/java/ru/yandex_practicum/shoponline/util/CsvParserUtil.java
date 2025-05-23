@@ -4,6 +4,7 @@ import de.siegmar.fastcsv.reader.CsvContainer;
 import de.siegmar.fastcsv.reader.CsvReader;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import ru.yandex_practicum.shoponline.model.entity.Product;
 
@@ -14,9 +15,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.stream.Collectors;
 
+@Component
 public class CsvParserUtil {
 
-    public static Flux<Product> parseCsv(FilePart file) {
+    public Flux<Product> parseCsv(FilePart file) {
         return file.content()
             .map(DataBuffer::asInputStream)
             .flatMap(inputStream -> {

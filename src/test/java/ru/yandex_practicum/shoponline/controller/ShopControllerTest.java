@@ -2,461 +2,306 @@ package ru.yandex_practicum.shoponline.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import ru.yandex_practicum.shoponline.config.DataSourceConfig;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Item;
 import ru.yandex_practicum.shoponline.model.entity.Order;
 import ru.yandex_practicum.shoponline.model.entity.Product;
-import ru.yandex_practicum.shoponline.repository.ItemRepository;
-import ru.yandex_practicum.shoponline.repository.OrderRepository;
-import ru.yandex_practicum.shoponline.repository.ProductRepository;
+import ru.yandex_practicum.shoponline.service.CartService;
+import ru.yandex_practicum.shoponline.service.ItemService;
+import ru.yandex_practicum.shoponline.service.OrderService;
+import ru.yandex_practicum.shoponline.service.ProductService;
+import ru.yandex_practicum.shoponline.util.CsvParserUtil;
 
 import java.sql.Timestamp;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashMap;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@AutoConfigureMockMvc
-@Import(DataSourceConfig.class)
+@WebFluxTest(ShopController.class)
 class ShopControllerTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
 
-    @Autowired
-    private ItemRepository itemRepository;
+    @MockBean
+    private ItemService itemService;
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @MockBean
+    private OrderService orderService;
 
-    @Autowired
-    private ProductRepository productRepository;
+    @MockBean
+    private ProductService productService;
+
+    @MockBean
+    private CartService cartService;
+
+    @MockBean
+    private CsvParserUtil csvParserUtil;
 
     @BeforeEach
     void setUp() {
-        itemRepository.deleteAll();
-        orderRepository.deleteAll();
-        productRepository.deleteAll();
     }
 
     @Test
-    void showMainPage_shoudReturnMainPage() throws Exception {
-        var products = List.of(
+    void showMainPage_shouldReturnMainPage() throws Exception {
+        var search = "test";
+        var sort = "NO";
+        var pageSize = 5;
+        var pageNumber = 1;
+
+        var products = Arrays.asList(
                 new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00),
                 new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00),
                 new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00)
         );
-        productRepository.saveAll(products);
 
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "NO")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(4)) // 3 rows for products + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[1]/b").string("t-short"))
-                .andExpect(xpath("/html/body/table/tr[3]/td[1]/table/tr[2]/td[1]/b").string("trousers"))
-                .andExpect(xpath("/html/body/table/tr[4]/td[1]/table/tr[2]/td[1]/b").string("sneakers"));
+        when(productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber))
+                .thenReturn(Flux.fromIterable(products));
+
+        when(cartService.getCartItemMap()).thenReturn(Mono.just(new HashMap<>()));
+
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/")
+                        .queryParam("pageSize", pageSize)
+                        .queryParam("pageNumber", pageNumber)
+                        .queryParam("search", search)
+                        .queryParam("sort", sort)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains("t-short"));
+                    assertTrue(body.contains("trousers"));
+                    assertTrue(body.contains("sneakers"));
+                });
+
+        Mockito.verify(productService, Mockito.times(1)).findAllBySearchAndSort(search, sort, pageSize, pageNumber);
     }
 
-    @Test
-    void showMainPage_shoudReturnProductBySearchOnly() throws Exception {
-        var products = List.of(
-                new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00),
-                new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00),
-                new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00)
-        );
-        productRepository.saveAll(products);
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "ers")
-                        .param("sort", "NO")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(3)) // 2 rows for products + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[1]/b").string("trousers"))
-                .andExpect(xpath("/html/body/table/tr[3]/td[1]/table/tr[2]/td[1]/b").string("sneakers"));
-    }
-
-    @Test
-    void showMainPage_shoudReturnProductOnPageOnly() throws Exception {
-        var products = List.of(
-                new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00),
-                new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00),
-                new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00)
-        );
-        productRepository.saveAll(products);
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "2")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "NO")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(3)) // 2 rows for products + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[1]/b").string("t-short"))
-                .andExpect(xpath("/html/body/table/tr[3]/td[1]/table/tr[2]/td[1]/b").string("trousers"));
-    }
-
-    @Test
-    void showMainPage_shoudReturnProductSortedByName() throws Exception {
-        var products = List.of(
-                new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00),
-                new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00),
-                new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00)
-        );
-        productRepository.saveAll(products);
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "ALPHA")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(4)) // 3 rows for products + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[1]/b").string("sneakers"))
-                .andExpect(xpath("/html/body/table/tr[3]/td[1]/table/tr[2]/td[1]/b").string("t-short"))
-                .andExpect(xpath("/html/body/table/tr[4]/td[1]/table/tr[2]/td[1]/b").string("trousers"));
-    }
-
-    @Test
-    void showMainPage_shoudReturnProductSortedByPrice() throws Exception {
-        var products = List.of(
-                new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00),
-                new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00),
-                new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00)
-        );
-        productRepository.saveAll(products);
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "PRICE")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(4)) // 3 rows for products + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[2]/b").string("50.0 руб."))
-                .andExpect(xpath("/html/body/table/tr[3]/td[1]/table/tr[2]/td[2]/b").string("100.0 руб."))
-                .andExpect(xpath("/html/body/table/tr[4]/td[1]/table/tr[2]/td[2]/b").string("150.0 руб."));
-    }
 
     @Test
     void downloadImage_shouldReturnImageResource() throws Exception {
+        var productId = 1L;
         var image = "test image".getBytes();
         var product = new Product("t-short", "test t-short", image, 50.00);
-        product = productRepository.save(product);
 
-        mockMvc.perform(get("/images/{postId}", product.getId()))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("application/octet-stream"))
-                .andExpect(header().string("Content-Length", String.valueOf(image.length)))
-                .andExpect(content().bytes(image));
+        when(productService.findById(productId)).thenReturn(Mono.just(product));
+
+        webTestClient.get()
+                .uri("/images/" + productId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("application/octet-stream")
+                .expectHeader().contentLength(image.length)
+                .expectBody(byte[].class).consumeWith(response -> {
+                    byte[] binary = response.getResponseBody();
+                    assertArrayEquals(image, binary);
+                });
+
+        Mockito.verify(productService, Mockito.times(1)).findById(productId);
     }
 
     @Test
-    void changeItemCountOnMain_shouldIncreaseItemCount() throws Exception {
-        var product = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product = productRepository.save(product);
+    void changeItemCountOnMain_shouldRedirectToMainPage() throws Exception {
+        var itemId = 1L;
+        var action = "plus";
+        var cart = new Order(1L, 0.0, null);
 
-        mockMvc.perform(post("/main/item/" + product.getId())
-                .param("action", "plus"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
+        when(orderService.getCart()).thenReturn(Mono.just(cart));
 
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(2))
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[4]/td/form/span").string("1"));
-    }
+        when(cartService.updateCartItem(itemId, action))
+                .thenReturn(Mono.just(cart));
 
-    @Test
-    void changeItemCountOnMain_shouldDecreaseItemCount() throws Exception {
-        var product = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product = productRepository.save(product);
-
-        mockMvc.perform(post("/main/item/" + product.getId())
-                        .param("action", "minus"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(2))
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[4]/td/form/span").string("-1"));
+        webTestClient.post().uri(uriBuilder -> uriBuilder
+                .path("/main/item/" + itemId)
+                .queryParam("action", action)
+                .build())
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().location("/");
     }
 
     @Test
     void showItem_shouldShowItemById() throws Exception {
+        var itemId = 1L;
         var product = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product = productRepository.save(product);
 
-        mockMvc.perform(get("/item/" + product.getId()))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("item"))
-                .andExpect(model().attributeExists("item"))
-                .andExpect(xpath("/html/body/div/p[2]/b").string(product.getName()));
+        when(productService.findById(itemId)).thenReturn(Mono.just(product));
+
+        when(cartService.getCartItemMap()).thenReturn(Mono.just(new HashMap<>()));
+
+        webTestClient.get().uri("/item/" + itemId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains(product.getName()));
+                    assertTrue(body.contains(product.getDescription()));
+                });
+
+        Mockito.verify(productService, Mockito.times(1)).findById(itemId);
     }
 
     @Test
-    void changeItemCount_shouldIncreaseItemCountOnItemPage() throws Exception {
-        var product = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product = productRepository.save(product);
+    void changeItemCount_shouldRedirectOnItemPage() throws Exception {
+        var itemId = 1L;
+        var action = "plus";
+        var cart = new Order(1L, 0.0, null);
 
-        mockMvc.perform(post("/item/" + product.getId())
-                        .param("action", "plus"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/item/" + product.getId()));
+        when(orderService.getCart()).thenReturn(Mono.just(cart));
 
-        mockMvc.perform(get("/item/" + product.getId()))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("item"))
-                .andExpect(xpath("/html/body/div/form/span").string("1"));
+        when(cartService.updateCartItem(itemId, action))
+                .thenReturn(Mono.just(cart));
+
+        webTestClient.post().uri(uriBuilder -> uriBuilder
+                        .path("/item/" + itemId)
+                        .queryParam("action", action)
+                        .build())
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().location("/item/" + itemId);
     }
 
     @Test
     void showOrders_shouldReturnAllOrders() throws Exception {
-        var product1 = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        var product2 = new Product("trousers", "test trousers", "trousers image".getBytes(), 150.00);
-        var product3 = new Product("sneakers", "test sneakers", "sneakers image".getBytes(), 100.00);
-        product1 = productRepository.save(product1);
-        product2 = productRepository.save(product2);
-        product3 = productRepository.save(product3);
-        var orders = List.of(
-                new Order(300.0, Timestamp.valueOf("2025-04-29 12:34:56")),
-                new Order(200.0, Timestamp.valueOf("2025-04-30 12:34:56"))
+        var orders = Arrays.asList(
+                new Order(1L, 1000.00, Timestamp.valueOf(LocalDateTime.now()))
         );
-        var itemList1 = List.of(
-                new Item(product1, 1),
-                new Item(product2, 1),
-                new Item(product3, 1)
-        );
-        itemRepository.saveAll(itemList1);
-        orders.get(0).setItems(itemList1);
-        var itemList2 = List.of(
-                new Item(product1, 1),
-                new Item(product2, 1)
-        );
-        itemRepository.saveAll(itemList2);
-        orders.get(0).setItems(itemList2);
-        orderRepository.saveAll(orders);
 
-        mockMvc.perform(get("/orders"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("orders"))
-                .andExpect(model().attributeExists("orders"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(2))
-                .andExpect(xpath("/html/body/table/tr[1]/td/p/b").string("Сумма: 300.0 руб."))
-                .andExpect(xpath("/html/body/table/tr[2]/td/p/b").string("Сумма: 200.0 руб."));
+        when(orderService.findAllOrders()).thenReturn(Flux.fromIterable(orders));
+
+        when(itemService.findByOrderId(1L)).thenReturn(Flux.just(new Item(1L, 1L, 1)));
+
+        when(productService.findById(1L))
+                .thenReturn(Mono.just(new Product(1L, "t-short", "test t-short", "t-short image".getBytes(), 50.00)));
+
+        webTestClient.get()
+                .uri("/orders")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains("Заказ №1"));
+                    assertTrue(body.contains("t-short"));
+                });
     }
 
     @Test
     void showOrder_shouldReturnOrder() throws Exception {
-        var product1 = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product1 = productRepository.save(product1);
-        var item1 = new Item(product1, 1);
-        item1 = itemRepository.save(item1);
-        var order = new Order(300.0, Timestamp.valueOf("2025-04-29 12:34:56"));
-        order.setItems(List.of(item1));
-        order = orderRepository.save(order);
-        // when order is old
-        mockMvc.perform(get("/order/" + order.getId() + "/old"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("order"))
-                .andExpect(model().attributeExists("order"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(3)) //head + item(1) + totalSum
-                .andExpect(xpath("/html/body/table/tr[1]/td/h2").string("Заказ №" +order.getId()));
-        // when order is new
-        mockMvc.perform(get("/order/" + order.getId() + "/new"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("order"))
-                .andExpect(model().attributeExists("order"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(3)) //head + item(1) + totalSum
-                .andExpect(xpath("/html/body/h1").string("Поздравляем! Успешная покупка! \uD83D\uDE42"))
-                .andExpect(xpath("/html/body/table/tr[1]/td/h2").string("Заказ №" +order.getId()));
+        var order = new Order(1L, 1000.00, Timestamp.valueOf(LocalDateTime.now()));
+
+        when(orderService.findOrder(order.getId())).thenReturn(Mono.just(order));
+
+        when(itemService.findByOrderId(order.getId()))
+                .thenReturn(Flux.just(new Item(1L, 1L, 1)));
+
+        when(productService.findById(1L))
+                .thenReturn(Mono.just(new Product(1L, "t-short", "test t-short", "t-short image".getBytes(), 50.00)));
+
+        webTestClient.get()
+                .uri("/order/" + order.getId() + "/new")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains("Поздравляем! Успешная покупка! &#128578;"));
+                    assertTrue(body.contains("Заказ №" + order.getId()));
+                    assertTrue(body.contains("t-short"));
+                });
     }
 
     @Test
     void showCart_shouldReturnCartPage() throws Exception {
-        var product1 = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product1 = productRepository.save(product1);
-        var item1 = new Item(product1, 1);
-        item1 = itemRepository.save(item1);
-        var cart = new Order(300.0);
-        cart.setItems(List.of(item1));
-        cart = orderRepository.save(cart);
-        mockMvc.perform(get("/cart/items"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("cart"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("total"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(3)) //item(1) + total + buy form
-                .andExpect(xpath("/html/body/table/tr[2]/td/b").string("Итого: " + cart.getTotalSum() + " руб."));
+        var cart = new Order(1L, 150.00, null);
+        var item = new Item(1L, 1L, 3);
+
+        when(orderService.getCart()).thenReturn(Mono.just(cart));
+
+        when(itemService.findByOrderId(cart.getId())).thenReturn(Flux.just(item));
+
+        when(productService.findById(item.getProductId()))
+                .thenReturn(Mono.just(new Product(1L, "t-short", "test t-short", "t-short image".getBytes(), 50.00)));
+
+        webTestClient.get()
+                .uri("/cart/items")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains("t-short"));
+                    assertTrue(body.contains("Итого: " + cart.getTotalSum() + " руб."));
+                });
     }
 
     @Test
-    void changeItemCountOnCart_shouldDeleteItemFromCart() throws Exception {
-        var product1 = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product1 = productRepository.save(product1);
-        var item1 = new Item(product1, 1);
-        item1 = itemRepository.save(item1);
-        var cart = new Order(300.0);
-        cart.setItems(List.of(item1));
-        orderRepository.save(cart);
+    void changeItemCountOnCart_shouldRedirectOnCartPage() throws Exception {
+        var itemId = 1L;
+        var action = "plus";
+        var cart = new Order(1L, 0.0, null);
 
-        mockMvc.perform(post("/cart/item/" + product1.getId())
-                        .param("action", "delete"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/cart/items"));
+        when(orderService.getCart()).thenReturn(Mono.just(cart));
 
-        mockMvc.perform(get("/cart/items"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("cart"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(2)) // item(0)
-                .andExpect(xpath("/html/body/table/tr[1]/td/b").string("Итого: 0.0 руб."));
+        when(cartService.updateCartItem(itemId, action))
+                .thenReturn(Mono.just(cart));
+
+        webTestClient.post().uri(uriBuilder -> uriBuilder
+                        .path("/cart/item/" + itemId)
+                        .queryParam("action", action)
+                        .build())
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().location("/cart/items");
     }
 
     @Test
-    void buy_shouldSaveCartAsNewOrder() throws Exception {
-        var product1 = new Product("t-short", "test t-short", "t-short image".getBytes(), 50.00);
-        product1 = productRepository.save(product1);
-        var item1 = new Item(product1, 1);
-        item1 = itemRepository.save(item1);
-        var cart = new Order(300.0);
-        cart.setItems(List.of(item1));
-        cart = orderRepository.save(cart);
+    void buy_shouldRedirectOnNewOrderPage() throws Exception {
+        var cart = new Order(1L, 150.00, null);
 
-        mockMvc.perform(post("/buy"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/order/" + cart.getId() + "/new"));
+        when(orderService.getCart()).thenReturn(Mono.just(cart));
+        when(orderService.createNewOrder(cart)).thenReturn(Mono.just(cart));
 
-        mockMvc.perform(get("/orders"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("orders"))
-                .andExpect(model().attributeExists("orders"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(1))
-                .andExpect(xpath("/html/body/table/tr[1]/td/h2/a").string("Заказ №" + cart.getId()))
-                .andExpect(xpath("/html/body/table/tr[1]/td/p/b").string("Сумма: " + cart.getTotalSum() + " руб."));
+        webTestClient.post()
+                .uri("/buy")
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().location("/order/" + cart.getId() + "/new");
     }
 
     @Test
     void showAddItemForm_shouldReturnAddItemFormPage() throws Exception {
-        mockMvc.perform(get("/items/add"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("add-item"));
-    }
-
-    @Test
-    void saveNewItem_shouldSaveItem() throws Exception {
-        MockMultipartFile mockImage = new MockMultipartFile(
-                "test-image",
-                "test-image.png",
-                "image/png",
-                "Mock Image Content".getBytes()
-        );
-
-        mockMvc.perform(multipart("/saveItem")
-                        .file("image", mockImage.getBytes())
-                        .param("name", "test name")
-                        .param("description", "test description")
-                        .param("price", "150.0")
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
-
-        mockMvc.perform(get("/")
-                        .param("pageSize", "5")
-                        .param("pageNumber", "1")
-                        .param("search", "")
-                        .param("sort", "NO")
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(view().name("main"))
-                .andExpect(model().attributeExists("items"))
-                .andExpect(model().attributeExists("paging"))
-                .andExpect(model().attributeExists("search"))
-                .andExpect(model().attributeExists("sort"))
-                .andExpect(xpath("/html/body/table/tr").nodeCount(2)) // 1 rows for new product + 1 row search form
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[1]/b").string("test name"))
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[2]/td[2]/b").string("150.0 руб."))
-                .andExpect(xpath("/html/body/table/tr[2]/td[1]/table/tr[3]/td").string("test description"));
+        webTestClient.get()
+                .uri("/items/add")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType("text/html")
+                .expectBody(String.class).consumeWith(response -> {
+                    String body = response.getResponseBody();
+                    assertNotNull(body);
+                    assertTrue(body.contains("<h3>Добавьте csv-файл для загрузки новых товаров</h3>"));
+                });
     }
 
 }
