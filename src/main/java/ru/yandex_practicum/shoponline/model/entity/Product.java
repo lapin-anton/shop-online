@@ -1,29 +1,22 @@
 package ru.yandex_practicum.shoponline.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.io.Serializable;
-import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
-@EqualsAndHashCode(exclude = {"id", "items"})
-@Entity
+@EqualsAndHashCode(exclude = "id")
 @Table(name = "products")
 public class Product implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
@@ -33,9 +26,6 @@ public class Product implements Serializable {
     private byte[] image;
 
     private Double price;
-
-    @OneToMany(mappedBy = "product")
-    private List<Item> items;
 
     public Product(String name, String description, byte[] image, Double price) {
         this.name = name;

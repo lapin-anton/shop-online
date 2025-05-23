@@ -3,6 +3,7 @@
 
 <head>
     <title>Заказ</title>
+    <meta charset="UTF-8">
 </head>
 
 <body>
@@ -27,20 +28,20 @@
             <table>
                 <tr>
                     <td>
-                        <a th:href="${'/items/'+item.getId()}">
-                            <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProduct().getId()}"></img>
+                        <a th:href="${'/items/'+item.getProductId()}">
+                            <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProductId()}"></img>
                         </a>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <b th:text="${item.getProduct().getName()}"></b>
+                        <b th:text="${item.getName()}"></b>
                     </td>
                     <td>
                         <b th:text="${item.getCount()}+' шт.'"></b>
                     </td>
                     <td>
-                        <b th:text="${item.getProduct().getPrice()*item.getCount()}+' руб.'"></b>
+                        <b th:text="${item.getPrice()*item.getCount()}+' руб.'"></b>
                     </td>
                 </tr>
             </table>

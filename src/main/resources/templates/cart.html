@@ -3,6 +3,7 @@
 
 <head>
     <title>Корзина товаров</title>
+    <meta charset="UTF-8">
 </head>
 
 <body>
@@ -18,21 +19,21 @@
             <table>
                 <tr>
                     <td>
-                        <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProduct().getId()}"></img>
+                        <img width="300" height="300" th:src="${'http://localhost:8080/images/'+item.getProductId()}"></img>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <b th:text="${item.getProduct().getName()}"></b>
+                        <b th:text="${item.getName()}"></b>
                     </td>
                     <td>
-                        <b th:text="${item.getProduct().getPrice()}+' руб.'"></b>
+                        <b th:text="${item.getPrice()}+' руб.'"></b>
                     </td>
                 </tr>
-                <tr><td th:text="${item.getProduct().getDescription()}"></td></tr>
+                <tr><td th:text="${item.getDescription()}"></td></tr>
                 <tr>
                     <td>
-                        <form th:action="${'/cart/item/'+item.getProduct().getId()}" method="post">
+                        <form th:action="${'/cart/item/'+item.getProductId()}" method="post">
                             <button th:if="${item.getCount() > 0}" name="action" value="minus">-</button>
                             <span th:text="${item.getCount()}"></span>
                             <button name="action" value="plus">+</button>
