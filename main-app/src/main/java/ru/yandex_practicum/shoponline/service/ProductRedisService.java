@@ -7,9 +7,7 @@ import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.redis.Product;
 import ru.yandex_practicum.shoponline.repository.redis.ProductRedisRepository;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.StreamSupport;
 
 @Service
