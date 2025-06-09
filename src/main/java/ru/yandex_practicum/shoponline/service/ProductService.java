@@ -50,7 +50,9 @@ public class ProductService {
     }
 
     public Mono<Product> findById(Long productId) {
-        return productRepository.findById(productId);
+        return productRedisService.findById(productId)
+                .switchIfEmpty(productRepository.findById(productId)
+                        .flatMap(productRedisService::save));
     }
 
     public Mono<Product> saveNewProduct(Product product) {

@@ -9,6 +9,7 @@ import ru.yandex_practicum.shoponline.repository.redis.ProductRedisRepository;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -55,5 +56,10 @@ public class ProductRedisService {
 
     public Mono<ru.yandex_practicum.shoponline.model.entity.Product> save(ru.yandex_practicum.shoponline.model.entity.Product p) {
         return Mono.just(mapToEntity(productRedisRepository.save(mapToRedis(p))));
+    }
+
+    public Mono<ru.yandex_practicum.shoponline.model.entity.Product> findById(Long productId) {
+        var cashedProductOpt = productRedisRepository.findById(productId);
+        return Mono.just(cashedProductOpt.isPresent() ? mapToEntity(cashedProductOpt.get()) : null);
     }
 }
