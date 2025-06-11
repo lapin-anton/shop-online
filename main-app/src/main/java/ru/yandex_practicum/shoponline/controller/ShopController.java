@@ -192,7 +192,7 @@ public class ShopController {
         var balanceInfo = paymentAppService.checkBalance();
         model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
         model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
-        model.addAttribute("balance",balanceInfo);
+        model.addAttribute("balance", balanceInfo);
         return Mono.just("cart");
     }
 
@@ -210,7 +210,10 @@ public class ShopController {
     @PostMapping("/buy")
     public Mono<String> buy() {
         return orderService.getCart()
-                .flatMap(orderService::createNewOrder)
+                .flatMap(cart -> {
+                    paymentAppService.withdraw(cart.getTotalSum());
+                    return orderService.createNewOrder(cart);
+                })
                 .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
     }
 

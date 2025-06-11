@@ -58,6 +58,6 @@ public class ProductRedisService {
 
     public Mono<ru.yandex_practicum.shoponline.model.entity.Product> findById(Long productId) {
         var cashedProductOpt = productRedisRepository.findById(productId);
-        return Mono.just(cashedProductOpt.isPresent() ? mapToEntity(cashedProductOpt.get()) : null);
+        return cashedProductOpt.isPresent() ? Mono.just(mapToEntity(cashedProductOpt.get())) : Mono.empty();
     }
 }

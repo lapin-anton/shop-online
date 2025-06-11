@@ -9,7 +9,7 @@ import lombok.Setter;
 @Builder
 public class BalanceInfoDto {
 
-    private Double currentValue;
+    private double currentValue;
 
     private String message;
 
