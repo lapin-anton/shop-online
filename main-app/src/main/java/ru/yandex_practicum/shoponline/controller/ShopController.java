@@ -29,6 +29,7 @@ import ru.yandex_practicum.shoponline.model.other.Paging;
 import ru.yandex_practicum.shoponline.service.CartService;
 import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
+import ru.yandex_practicum.shoponline.service.PaymentAppService;
 import ru.yandex_practicum.shoponline.service.ProductService;
 import ru.yandex_practicum.shoponline.util.CsvParserUtil;
 
@@ -49,6 +50,8 @@ public class ShopController {
     private final CartService cartService;
 
     private final CsvParserUtil csvParserUtil;
+
+    private final PaymentAppService paymentAppService;
 
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
@@ -186,8 +189,10 @@ public class ShopController {
                 return Mono.just(new OrderDto(null, cart.getTotalSum(), cart.getCreatedAt(), List.of()));
             }
         });
+        var balanceInfo = paymentAppService.checkBalance();
         model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
         model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
+        model.addAttribute("balance",balanceInfo);
         return Mono.just("cart");
     }
 
