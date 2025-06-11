@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.PageRequest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.entity.Product;
@@ -26,6 +25,9 @@ class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private ProductRedisService productRedisService;
+
     @InjectMocks
     private ProductService productService;
 
@@ -33,9 +35,10 @@ class ProductServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
+
     @Test
     void findAllBySearchAndSort_shouldReturnSortedProductsByName() {
-        String search = "test";
+        String search = "";
         String sort = "ALPHA";
         int pageSize = 10;
         int pageNumber = 1;
@@ -45,8 +48,8 @@ class ProductServiceTest {
         Product product2 = new Product();
         product2.setName("sneakers");
 
-        when(productRepository.findAllByNameContainingOrderByName(search, PageRequest.of(pageNumber - 1, pageSize)))
-                .thenReturn(Flux.just(product2, product1));
+        when(productRedisService.findAll())
+                .thenReturn(List.of(product2, product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 
@@ -57,23 +60,25 @@ class ProductServiceTest {
         assertEquals("sneakers", productList.get(0).getName());
         assertEquals("t-short", productList.get(1).getName());
 
-        verify(productRepository, times(1)).findAllByNameContainingOrderByName(search, PageRequest.of(pageNumber - 1, pageSize));
+        verify(productRedisService, times(1)).findAll();
     }
 
     @Test
     void findAllBySearchAndSort_shouldReturnSortedProductsByPrice() {
-        String search = "test";
+        String search = "";
         String sort = "PRICE";
         int pageSize = 10;
         int pageNumber = 1;
 
         Product product1 = new Product();
+        product1.setName("product1");
         product1.setPrice(10.0);
         Product product2 = new Product();
+        product2.setName("product2");
         product2.setPrice(5.0);
 
-        when(productRepository.findAllByNameContainingOrderByPrice(search, PageRequest.of(pageNumber - 1, pageSize)))
-                .thenReturn(Flux.just(product2, product1));
+        when(productRedisService.findAll())
+                .thenReturn(List.of(product2, product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 
@@ -84,21 +89,23 @@ class ProductServiceTest {
         assertEquals(5.0, productList.get(0).getPrice());
         assertEquals(10.0, productList.get(1).getPrice());
 
-        verify(productRepository, times(1)).findAllByNameContainingOrderByPrice(search, PageRequest.of(pageNumber - 1, pageSize));
+        verify(productRedisService, times(1)).findAll();
     }
 
     @Test
     void findAllBySearchAndSort_shouldReturnUnsortedProducts() {
-        String search = "test";
+        String search = "";
         String sort = "NONE";
         int pageSize = 10;
         int pageNumber = 1;
 
         Product product1 = new Product();
+        product1.setName("product1");
         Product product2 = new Product();
+        product2.setName("product2");
 
-        when(productRepository.findAllByNameContaining(search, PageRequest.of(pageNumber - 1, pageSize)))
-                .thenReturn(Flux.just(product1, product2));
+        when(productRedisService.findAll())
+                .thenReturn(List.of(product2, product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 
@@ -107,7 +114,7 @@ class ProductServiceTest {
         assertNotNull(productList);
         assertEquals(2, productList.size());
 
-        verify(productRepository, times(1)).findAllByNameContaining(search, PageRequest.of(pageNumber - 1, pageSize));
+        verify(productRedisService, times(1)).findAll();
     }
 
     @Test
@@ -115,6 +122,7 @@ class ProductServiceTest {
         Long productId = 1L;
         Product product = new Product();
 
+        when(productRedisService.findById(productId)).thenReturn(Mono.just(product));
         when(productRepository.findById(productId)).thenReturn(Mono.just(product));
         Mono<Product> foundProduct = productService.findById(productId);
 
@@ -124,12 +132,14 @@ class ProductServiceTest {
         });
 
         verify(productRepository, times(1)).findById(productId);
+        verify(productRedisService, times(1)).findById(productId);
     }
 
     @Test
     void findById_shouldReturnEmptyWhenProductNotFound() {
         Long productId = 1L;
 
+        when(productRedisService.findById(productId)).thenReturn(Mono.empty());
         when(productRepository.findById(productId)).thenReturn(Mono.empty());
 
         Mono<Product> foundProduct = productService.findById(productId);
@@ -137,6 +147,7 @@ class ProductServiceTest {
         foundProduct.subscribe(Assertions::assertNull);
 
         verify(productRepository, times(1)).findById(productId);
+        verify(productRedisService, times(1)).findById(productId);
     }
 
     @Test
