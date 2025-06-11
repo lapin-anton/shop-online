@@ -48,8 +48,10 @@ class ProductServiceTest {
         Product product2 = new Product();
         product2.setName("sneakers");
 
-        when(productRedisService.findAll())
-                .thenReturn(List.of(product2, product1));
+        when(productRedisService.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRepository.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRedisService.save(product2)).thenReturn(Mono.just(product2));
+        when(productRedisService.save(product1)).thenReturn(Mono.just(product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 
@@ -77,8 +79,10 @@ class ProductServiceTest {
         product2.setName("product2");
         product2.setPrice(5.0);
 
-        when(productRedisService.findAll())
-                .thenReturn(List.of(product2, product1));
+        when(productRedisService.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRepository.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRedisService.save(product2)).thenReturn(Mono.just(product2));
+        when(productRedisService.save(product1)).thenReturn(Mono.just(product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 
@@ -100,12 +104,16 @@ class ProductServiceTest {
         int pageNumber = 1;
 
         Product product1 = new Product();
+        product1.setId(1L);
         product1.setName("product1");
         Product product2 = new Product();
+        product2.setId(2L);
         product2.setName("product2");
 
-        when(productRedisService.findAll())
-                .thenReturn(List.of(product2, product1));
+        when(productRedisService.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRepository.findAll()).thenReturn(Flux.fromIterable(List.of(product2, product1)));
+        when(productRedisService.save(product2)).thenReturn(Mono.just(product2));
+        when(productRedisService.save(product1)).thenReturn(Mono.just(product1));
 
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
 

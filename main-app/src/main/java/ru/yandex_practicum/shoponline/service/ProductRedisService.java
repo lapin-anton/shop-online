@@ -2,7 +2,7 @@ package ru.yandex_practicum.shoponline.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.redis.Product;
 import ru.yandex_practicum.shoponline.repository.redis.ProductRedisRepository;
@@ -16,28 +16,21 @@ public class ProductRedisService {
 
     private final ProductRedisRepository productRedisRepository;
 
-    public List<ru.yandex_practicum.shoponline.model.entity.Product> findAll() {
-        var productList = StreamSupport.stream(productRedisRepository.findAll().spliterator(), false)
-                .toList();
-        if (!productList.isEmpty() && productList.get(0) == null) {
-            productRedisRepository.deleteAll();
-            productList = List.of();
-        }
-        return productList.stream()
-                .map(this::mapToEntity)
-                .toList();
-    }
+//    public List<ru.yandex_practicum.shoponline.model.entity.Product> findAll() {
+//        var productList = StreamSupport.stream(productRedisRepository.findAll().spliterator(), false)
+//                .toList();
+//        if (!productList.isEmpty() && productList.get(0) == null) {
+//            productRedisRepository.deleteAll();
+//            productList = List.of();
+//        }
+//        return productList.stream()
+//                .map(this::mapToEntity)
+//                .toList();
+//    }
 
-    @Transactional
-    public Mono<List<ru.yandex_practicum.shoponline.model.entity.Product>> saveAll(List<ru.yandex_practicum.shoponline.model.entity.Product> productList) {
-        var redisProductList = productList.stream().map(this::mapToRedis).toList();
-        return Mono.just(
-                StreamSupport.stream(productRedisRepository.saveAll(redisProductList).spliterator(), false)
-                        .toList()
-                        .stream()
-                        .map(this::mapToEntity)
-                        .toList()
-        );
+    public Flux<ru.yandex_practicum.shoponline.model.entity.Product> findAll() {
+        return Flux.fromIterable(productRedisRepository.findAll())
+                .map(this::mapToEntity);
     }
 
     private ru.yandex_practicum.shoponline.model.entity.Product mapToEntity(Product product) {
@@ -59,5 +52,9 @@ public class ProductRedisService {
     public Mono<ru.yandex_practicum.shoponline.model.entity.Product> findById(Long productId) {
         var cashedProductOpt = productRedisRepository.findById(productId);
         return cashedProductOpt.isPresent() ? Mono.just(mapToEntity(cashedProductOpt.get())) : Mono.empty();
+    }
+
+    public void deleteAll() {
+        productRedisRepository.deleteAll();
     }
 }

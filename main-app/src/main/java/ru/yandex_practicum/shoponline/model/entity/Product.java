@@ -14,7 +14,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @EqualsAndHashCode(exclude = "id")
 @Table(name = "products")
-public class Product implements Serializable {
+public class Product implements Serializable, Comparable<Product> {
 
     @Id
     private Long id;
@@ -42,4 +42,8 @@ public class Product implements Serializable {
         this.price = price;
     }
 
+    @Override
+    public int compareTo(Product other) {
+        return this.id.compareTo(other.id);
+    }
 }
