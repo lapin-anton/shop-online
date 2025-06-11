@@ -18,8 +18,8 @@ FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/payment-app.jar payment-app.jar
 
 EXPOSE 8081
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "payment-app.jar"]

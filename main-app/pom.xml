@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>ru.yandex_practicum</groupId>
-    <artifactId>shop-online</artifactId>
+    <artifactId>main-app</artifactId>
     <version>1.0.0</version>
-    <name>shop-online</name>
-    <description>shop-online</description>
+    <name>main-app</name>
+    <description>main-app</description>
 
     <properties>
         <java.version>21</java.version>
