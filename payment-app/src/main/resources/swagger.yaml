@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: PaymentApp API
+  version: 1.0.0
+paths:
+  /getBalance:
+    get:
+      operationId: getBalance
+      summary: Получить текущий баланс
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceInfo'
+  /withdraw:
+    put:
+      operationId: withdraw
+      summary: Списать со счета
+      parameters:
+        - name: amount
+          in: query
+          description: Сумма списания
+          required: true
+          schema:
+            type: number
+            example: 999.99
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceInfo'
+components:
+  schemas:
+    BalanceInfo:
+      type: object
+      properties:
+        currentValue:
+          type: number
+          description: Текущий баланс
+          example: 9999.99
