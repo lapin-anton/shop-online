@@ -8,8 +8,20 @@ create table products (
     price decimal
 );
 
+create table users (
+    id bigserial primary key,
+    name varchar(100) not null unique,
+    password text not null unique
+);
+
+create table accounts (
+    id bigint primary key references users(id),
+    balance decimal default 10000.00
+);
+
 create table orders (
     id bigserial primary key,
+    user_id bigint references users(id),
     total_sum decimal,
     created_at timestamp
 );
