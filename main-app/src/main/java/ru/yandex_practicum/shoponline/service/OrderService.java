@@ -22,8 +22,8 @@ public class OrderService {
         return orderRepository.findByCreatedAtIsNotNull();
     }
 
-    public Mono<Order> getCart() {
-        Mono<Order> cart = orderRepository.findByCreatedAtIsNull();
+    public Mono<Order> getCart(Long userId) {
+        Mono<Order> cart = orderRepository.findByUserIdAndCreatedAtIsNull(userId);
 
         return cart
                 .flatMap(Mono::just)

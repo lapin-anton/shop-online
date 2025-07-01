@@ -8,6 +8,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -32,6 +34,7 @@ import ru.yandex_practicum.shoponline.service.ItemService;
 import ru.yandex_practicum.shoponline.service.OrderService;
 import ru.yandex_practicum.shoponline.service.PaymentAppService;
 import ru.yandex_practicum.shoponline.service.ProductService;
+import ru.yandex_practicum.shoponline.service.UserService;
 import ru.yandex_practicum.shoponline.util.CsvParserUtil;
 
 import java.util.HashMap;
@@ -54,16 +57,20 @@ public class ShopController {
 
     private final PaymentAppService paymentAppService;
 
+    private final UserService userService;
+
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
-        @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
-        @RequestParam(value = "pageNumber", defaultValue = "1") int pageNumber,
-        @RequestParam(value = "search", defaultValue = "") String search,
-        @RequestParam(value = "sort", defaultValue = "NO") String sort
-    ) {
+                                     @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
+                                     @RequestParam(value = "pageNumber", defaultValue = "1") int pageNumber,
+                                     @RequestParam(value = "search", defaultValue = "") String search,
+                                     @RequestParam(value = "sort", defaultValue = "NO") String sort,
+                                     @AuthenticationPrincipal UserDetails userDetails
+                                     ) {
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
         Mono<Long> productCountMono = products.count();
-        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
+        Mono<HashMap<Long, Item>> cartItemMap = userService.findByName(userDetails.getUsername())
+                .flatMap(user -> cartService.getCartItemMap(user.getId()));
         Flux<ItemDto> items = products.flatMap(p ->
                 cartItemMap.flatMap(map -> {
                     Item item = map.get(p.getId());
@@ -96,141 +103,141 @@ public class ShopController {
                 .body(new ByteArrayResource(product.getImage())));
     }
 
-    @PostMapping("/main/item/{itemId}")
-    public Mono<String> changeItemCountOnMain(
-            @PathVariable("itemId") Long itemId,
-            @ModelAttribute ActionDto action
-    ) {
-        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
-                .flatMap(cart -> Mono.just("redirect:/"));
-    }
-
-    @GetMapping("/item/{itemId}")
-    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
-        Mono<Product> productMono = productService.findById(itemId);
-        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
-        Mono<ItemDto> itemMono = productMono.flatMap(p ->
-                cartItemMap.flatMap(map -> {
-                    Item item = map.get(p.getId());
-                    return Mono.just(new ItemDto(
-                            p.getId(),
-                            p.getId(),
-                            p.getName(),
-                            p.getDescription(),
-                            p.getPrice(),
-                            item != null ? item.getCount() : 0
-                    ));
-                })
-        );
-        model.addAttribute("item", itemMono);
-        return "item";
-    }
-
-    @Transactional
-    @PostMapping("/item/{itemId}")
-    public Mono<String> changeItemCount(
-            @PathVariable("itemId") Long itemId,
-            @ModelAttribute ActionDto action
-    ) {
-        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
-                .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
-    }
-
-    @GetMapping("/orders")
-    public Mono<String> showOrders(Model model) {
-        Flux<Order> ordersFlux = orderService.findAllOrders();
-
-        Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
-            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
-            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
-                Mono<Product> productMono = productService.findById(item.getProductId());
-                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
-            }).collectList();
-            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
-        });
-
-        model.addAttribute("orders", orderDtoFlux);
-        return Mono.just("orders");
-    }
-
-    @GetMapping("/order/{orderId}/{newOrder}")
-    public Mono<String> showOrder(Model model,
-                            @PathVariable("orderId") Long orderId,
-                            @PathVariable("newOrder") String newOrder) {
-        Mono<Order> orderMono = orderService.findOrder(orderId);
-
-        Mono<OrderDto> orderDtoMono = orderMono.flatMap(order -> {
-            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
-            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
-                Mono<Product> productMono = productService.findById(item.getProductId());
-                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
-            }).collectList();
-            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
-        });
-        model.addAttribute("order", orderDtoMono);
-        model.addAttribute("newOrder", "new".equals(newOrder));
-        return Mono.just("order");
-    }
-
-    @GetMapping("/cart/items")
-    public Mono<String> showCart(Model model) {
-        Mono<Order> cartMono = orderService.getCart();
-        Mono<OrderDto> orderDtoMono = cartMono.flatMap(cart -> {
-            Mono<List<ItemDto>> itemDtoListMono = null;
-            if (cart.getId() != null) {
-                Flux<Item> itemFlux = itemService.findByOrderId(cart.getId());
-                itemDtoListMono = itemFlux.flatMap(item -> {
-                    Mono<Product> productMono = productService.findById(item.getProductId());
-                    return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
-                }).collectList();
-            }
-            if (itemDtoListMono != null) {
-                return itemDtoListMono.map(itemDtoList -> new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), itemDtoList));
-            } else {
-                return Mono.just(new OrderDto(null, cart.getTotalSum(), cart.getCreatedAt(), List.of()));
-            }
-        });
-        var balanceInfo = paymentAppService.checkBalance();
-        model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
-        model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
-        model.addAttribute("balance", balanceInfo);
-        return Mono.just("cart");
-    }
-
-    @Transactional
-    @PostMapping("/cart/item/{itemId}")
-    public Mono<String> changeItemCountOnCart(
-            @PathVariable("itemId") Long itemId,
-            @ModelAttribute ActionDto action
-    ) {
-        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
-                .flatMap(cart -> Mono.just("redirect:/cart/items"));
-    }
-
-    @Transactional
-    @PostMapping("/buy")
-    public Mono<String> buy() {
-        return orderService.getCart()
-                .flatMap(cart -> {
-                    paymentAppService.withdraw(cart.getTotalSum());
-                    return orderService.createNewOrder(cart);
-                })
-                .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
-    }
-
-    @GetMapping("/items/add")
-    public Mono<String> showAddItemForm(Model model) {
-        return Mono.just("add-item");
-    }
-
-    @Transactional
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
-        return fileMono.flux()
-                .flatMap(csvParserUtil::parseCsv)
-                .flatMap(productService::saveNewProduct)
-                .collectList()
-                .flatMap(products -> Mono.just("redirect:/"));
-    }
+//    @PostMapping("/main/item/{itemId}")
+//    public Mono<String> changeItemCountOnMain(
+//            @PathVariable("itemId") Long itemId,
+//            @ModelAttribute ActionDto action
+//    ) {
+//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
+//                .flatMap(cart -> Mono.just("redirect:/"));
+//    }
+//
+//    @GetMapping("/item/{itemId}")
+//    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
+//        Mono<Product> productMono = productService.findById(itemId);
+//        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
+//        Mono<ItemDto> itemMono = productMono.flatMap(p ->
+//                cartItemMap.flatMap(map -> {
+//                    Item item = map.get(p.getId());
+//                    return Mono.just(new ItemDto(
+//                            p.getId(),
+//                            p.getId(),
+//                            p.getName(),
+//                            p.getDescription(),
+//                            p.getPrice(),
+//                            item != null ? item.getCount() : 0
+//                    ));
+//                })
+//        );
+//        model.addAttribute("item", itemMono);
+//        return "item";
+//    }
+//
+//    @Transactional
+//    @PostMapping("/item/{itemId}")
+//    public Mono<String> changeItemCount(
+//            @PathVariable("itemId") Long itemId,
+//            @ModelAttribute ActionDto action
+//    ) {
+//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
+//                .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
+//    }
+//
+//    @GetMapping("/orders")
+//    public Mono<String> showOrders(Model model) {
+//        Flux<Order> ordersFlux = orderService.findAllOrders();
+//
+//        Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
+//            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
+//            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
+//                Mono<Product> productMono = productService.findById(item.getProductId());
+//                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+//            }).collectList();
+//            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
+//        });
+//
+//        model.addAttribute("orders", orderDtoFlux);
+//        return Mono.just("orders");
+//    }
+//
+//    @GetMapping("/order/{orderId}/{newOrder}")
+//    public Mono<String> showOrder(Model model,
+//                            @PathVariable("orderId") Long orderId,
+//                            @PathVariable("newOrder") String newOrder) {
+//        Mono<Order> orderMono = orderService.findOrder(orderId);
+//
+//        Mono<OrderDto> orderDtoMono = orderMono.flatMap(order -> {
+//            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
+//            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
+//                Mono<Product> productMono = productService.findById(item.getProductId());
+//                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+//            }).collectList();
+//            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
+//        });
+//        model.addAttribute("order", orderDtoMono);
+//        model.addAttribute("newOrder", "new".equals(newOrder));
+//        return Mono.just("order");
+//    }
+//
+//    @GetMapping("/cart/items")
+//    public Mono<String> showCart(Model model) {
+//        Mono<Order> cartMono = orderService.getCart();
+//        Mono<OrderDto> orderDtoMono = cartMono.flatMap(cart -> {
+//            Mono<List<ItemDto>> itemDtoListMono = null;
+//            if (cart.getId() != null) {
+//                Flux<Item> itemFlux = itemService.findByOrderId(cart.getId());
+//                itemDtoListMono = itemFlux.flatMap(item -> {
+//                    Mono<Product> productMono = productService.findById(item.getProductId());
+//                    return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+//                }).collectList();
+//            }
+//            if (itemDtoListMono != null) {
+//                return itemDtoListMono.map(itemDtoList -> new OrderDto(cart.getId(), cart.getTotalSum(), cart.getCreatedAt(), itemDtoList));
+//            } else {
+//                return Mono.just(new OrderDto(null, cart.getTotalSum(), cart.getCreatedAt(), List.of()));
+//            }
+//        });
+//        var balanceInfo = paymentAppService.checkBalance();
+//        model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
+//        model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
+//        model.addAttribute("balance", balanceInfo);
+//        return Mono.just("cart");
+//    }
+//
+//    @Transactional
+//    @PostMapping("/cart/item/{itemId}")
+//    public Mono<String> changeItemCountOnCart(
+//            @PathVariable("itemId") Long itemId,
+//            @ModelAttribute ActionDto action
+//    ) {
+//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
+//                .flatMap(cart -> Mono.just("redirect:/cart/items"));
+//    }
+//
+//    @Transactional
+//    @PostMapping("/buy")
+//    public Mono<String> buy() {
+//        return orderService.getCart()
+//                .flatMap(cart -> {
+//                    paymentAppService.withdraw(cart.getTotalSum());
+//                    return orderService.createNewOrder(cart);
+//                })
+//                .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
+//    }
+//
+//    @GetMapping("/items/add")
+//    public Mono<String> showAddItemForm(Model model) {
+//        return Mono.just("add-item");
+//    }
+//
+//    @Transactional
+//    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
+//        return fileMono.flux()
+//                .flatMap(csvParserUtil::parseCsv)
+//                .flatMap(productService::saveNewProduct)
+//                .collectList()
+//                .flatMap(products -> Mono.just("redirect:/"));
+//    }
 
 }

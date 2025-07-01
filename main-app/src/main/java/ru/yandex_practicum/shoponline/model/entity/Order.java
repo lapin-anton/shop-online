@@ -26,6 +26,9 @@ public class Order {
     @Column("created_at")
     private Timestamp createdAt;
 
+    @Column("user_id")
+    private Long userId;
+
     public Order(Double totalSum) {
         this.totalSum = totalSum;
     }
