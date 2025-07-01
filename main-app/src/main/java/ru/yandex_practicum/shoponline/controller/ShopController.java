@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.dto.ActionDto;
@@ -55,10 +56,10 @@ public class ShopController {
 
     @GetMapping("/")
     public Mono<String> showMainPage(Model model,
-                                        @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
-                                        @RequestParam(value = "pageNumber", defaultValue = "1") int pageNumber,
-                                        @RequestParam(value = "search", defaultValue = "") String search,
-                                        @RequestParam(value = "sort", defaultValue = "NO") String sort
+        @RequestParam(value = "pageSize", defaultValue = "5") int pageSize,
+        @RequestParam(value = "pageNumber", defaultValue = "1") int pageNumber,
+        @RequestParam(value = "search", defaultValue = "") String search,
+        @RequestParam(value = "sort", defaultValue = "NO") String sort
     ) {
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
         Mono<Long> productCountMono = products.count();
