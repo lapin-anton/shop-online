@@ -18,8 +18,8 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    public Flux<Order> findAllOrders() {
-        return orderRepository.findByCreatedAtIsNotNull();
+    public Flux<Order> findAllOrdersByUser(Long userId) {
+        return orderRepository.findByUserIdAndCreatedAtIsNotNull(userId);
     }
 
     public Mono<Order> getCart(Long userId) {

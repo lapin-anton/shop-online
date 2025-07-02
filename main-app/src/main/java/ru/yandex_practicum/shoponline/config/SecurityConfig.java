@@ -55,6 +55,7 @@ public class SecurityConfig {
         return username -> userService.findByName(username).map(user ->
                 User.withUsername(user.getName())
                         .password(passwordEncoder.encode(user.getPassword()))
+                        .roles(user.getRole())
                         .build()
         );
     }

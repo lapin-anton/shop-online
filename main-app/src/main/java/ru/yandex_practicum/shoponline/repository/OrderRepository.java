@@ -11,6 +11,6 @@ public interface OrderRepository extends R2dbcRepository<Order, Long> {
 
     Mono<Order> findByUserIdAndCreatedAtIsNull(Long userId);
 
-    Flux<Order> findByCreatedAtIsNotNull();
+    Flux<Order> findByUserIdAndCreatedAtIsNotNull(Long userId);
 
 }

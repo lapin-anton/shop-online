@@ -11,7 +11,8 @@ create table products (
 create table users (
     id bigserial primary key,
     name varchar(100) not null unique,
-    password text not null unique
+    password text not null unique,
+    role varchar(100)
 );
 
 create table accounts (

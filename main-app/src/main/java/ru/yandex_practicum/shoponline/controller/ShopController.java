@@ -69,7 +69,8 @@ public class ShopController {
                                      ) {
         Flux<Product> products = productService.findAllBySearchAndSort(search, sort, pageSize, pageNumber);
         Mono<Long> productCountMono = products.count();
-        Mono<HashMap<Long, Item>> cartItemMap = userService.findByName(userDetails.getUsername())
+        Mono<HashMap<Long, Item>> cartItemMap = userService
+                .findByName(userDetails != null ? userDetails.getUsername() : null)
                 .flatMap(user -> cartService.getCartItemMap(user.getId()));
         Flux<ItemDto> items = products.flatMap(p ->
                 cartItemMap.flatMap(map -> {
@@ -90,6 +91,8 @@ public class ShopController {
         model.addAttribute("paging", paging);
         model.addAttribute("search", search);
         model.addAttribute("sort", sort);
+        model.addAttribute("user", userDetails != null ? userDetails.getUsername() : null);
+        model.addAttribute("isAnonym", userDetails == null);
         return Mono.just("main");
     }
 
@@ -106,32 +109,40 @@ public class ShopController {
 //    @PostMapping("/main/item/{itemId}")
 //    public Mono<String> changeItemCountOnMain(
 //            @PathVariable("itemId") Long itemId,
-//            @ModelAttribute ActionDto action
+//            @ModelAttribute ActionDto action,
+//            @AuthenticationPrincipal UserDetails userDetails
 //    ) {
-//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
+//        return userService.findByName(userDetails != null ? userDetails.getUsername() : null)
+//                .flatMap(user -> orderService.getCart(user.getId()))
+//                .flatMap(cart -> cartService.updateCartItem(cart.getUserId(), itemId, action.getAction()))
 //                .flatMap(cart -> Mono.just("redirect:/"));
 //    }
 //
-//    @GetMapping("/item/{itemId}")
-//    public String showItem(Model model, @PathVariable("itemId") Long itemId) {
-//        Mono<Product> productMono = productService.findById(itemId);
-//        Mono<HashMap<Long, Item>> cartItemMap = cartService.getCartItemMap();
-//        Mono<ItemDto> itemMono = productMono.flatMap(p ->
-//                cartItemMap.flatMap(map -> {
-//                    Item item = map.get(p.getId());
-//                    return Mono.just(new ItemDto(
-//                            p.getId(),
-//                            p.getId(),
-//                            p.getName(),
-//                            p.getDescription(),
-//                            p.getPrice(),
-//                            item != null ? item.getCount() : 0
-//                    ));
-//                })
-//        );
-//        model.addAttribute("item", itemMono);
-//        return "item";
-//    }
+    @GetMapping("/item/{itemId}")
+    public String showItem(Model model,
+                           @PathVariable("itemId") Long itemId,
+                           @AuthenticationPrincipal UserDetails userDetails) {
+        Mono<Product> productMono = productService.findById(itemId);
+        Mono<HashMap<Long, Item>> cartItemMap = userService.findByName(userDetails != null ? userDetails.getUsername() : null)
+                .flatMap(user -> cartService.getCartItemMap(user.getId()));
+        Mono<ItemDto> itemMono = productMono.flatMap(p ->
+                cartItemMap.flatMap(map -> {
+                    Item item = map.get(p.getId());
+                    return Mono.just(new ItemDto(
+                            p.getId(),
+                            p.getId(),
+                            p.getName(),
+                            p.getDescription(),
+                            p.getPrice(),
+                            item != null ? item.getCount() : 0
+                    ));
+                })
+        );
+        model.addAttribute("item", itemMono);
+        model.addAttribute("user", userDetails != null ? userDetails.getUsername() : null);
+        model.addAttribute("isAnonym", userDetails == null);
+        return "item";
+    }
 //
 //    @Transactional
 //    @PostMapping("/item/{itemId}")
@@ -143,22 +154,25 @@ public class ShopController {
 //                .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
 //    }
 //
-//    @GetMapping("/orders")
-//    public Mono<String> showOrders(Model model) {
-//        Flux<Order> ordersFlux = orderService.findAllOrders();
-//
-//        Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
-//            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
-//            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
-//                Mono<Product> productMono = productService.findById(item.getProductId());
-//                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
-//            }).collectList();
-//            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
-//        });
-//
-//        model.addAttribute("orders", orderDtoFlux);
-//        return Mono.just("orders");
-//    }
+    @GetMapping("/orders")
+    public Mono<String> showOrders(Model model,
+                                   @AuthenticationPrincipal UserDetails userDetails) {
+        Flux<Order> ordersFlux = userService.findByName(userDetails.getUsername())
+                .flatMapMany(user -> orderService.findAllOrdersByUser(user.getId()));
+
+        Flux<OrderDto> orderDtoFlux = ordersFlux.flatMap(order -> {
+            Flux<Item> itemFlux = itemService.findByOrderId(order.getId());
+            Mono<List<ItemDto>> itemDtoListMono = itemFlux.flatMap(item -> {
+                Mono<Product> productMono = productService.findById(item.getProductId());
+                return productMono.map(p -> new ItemDto(item.getId(), p.getId(), p.getName(), p.getDescription(), p.getPrice(), item.getCount()));
+            }).collectList();
+            return itemDtoListMono.map(itemDtoList -> new OrderDto(order.getId(), order.getTotalSum(), order.getCreatedAt(), itemDtoList));
+        });
+
+        model.addAttribute("orders", orderDtoFlux);
+        model.addAttribute("user", userDetails.getUsername());
+        return Mono.just("orders");
+    }
 //
 //    @GetMapping("/order/{orderId}/{newOrder}")
 //    public Mono<String> showOrder(Model model,

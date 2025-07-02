@@ -16,7 +16,8 @@ public class UserService {
     private final UserRepository userRepository;
 
     public Mono<User> findByName(String name) {
-        return userRepository.findByName(name).switchIfEmpty(Mono.empty());
+        return userRepository.findByName(name)
+                .switchIfEmpty(Mono.just(new User()));
     }
 
 }
