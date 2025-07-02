@@ -21,9 +21,10 @@ public class PaymentAppService {
     @Value("${payment-app.url}")
     private String paymentAppUrl;
 
-    public Mono<BalanceInfoDto> checkBalance() {
+    public Mono<BalanceInfoDto> checkBalance(Long userId) {
         try {
-            ResponseEntity<BalanceInfo> response = restTemplate.getForEntity(paymentAppUrl + "/getBalance", BalanceInfo.class);
+            var url = paymentAppUrl + "/getBalance?userId={userId}";
+            ResponseEntity<BalanceInfo> response = restTemplate.getForEntity(url, BalanceInfo.class, userId);
             return Mono.just(BalanceInfoDto.builder()
                     .currentValue(response.getBody().getCurrentValue().doubleValue())
                     .build());
@@ -34,12 +35,13 @@ public class PaymentAppService {
         }
     }
 
-    public Mono<BalanceInfoDto> withdraw(Double amount) {
+    public Mono<BalanceInfoDto> withdraw(Long userId, Double amount) {
         try {
+            var url = paymentAppUrl + "/withdraw?userId={userId}&amount={amount}";
             var headers = new HttpHeaders();
             var entity = new HttpEntity<>(headers);
             ResponseEntity<BalanceInfo> response =
-                    restTemplate.exchange(paymentAppUrl + "/withdraw?amount=" + amount, HttpMethod.PUT, entity, BalanceInfo.class);
+                    restTemplate.exchange(url, HttpMethod.PUT, entity, BalanceInfo.class, userId, amount);
             return Mono.just(BalanceInfoDto.builder()
                     .currentValue(response.getBody().getCurrentValue().doubleValue())
                     .build());

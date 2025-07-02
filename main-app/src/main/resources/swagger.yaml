@@ -7,6 +7,14 @@ paths:
     get:
       operationId: getBalance
       summary: Получить текущий баланс
+      parameters:
+        - name: userId
+          in: query
+          description: Идентификатор пользователя
+          required: true
+          schema:
+            type: integer
+            example: 1
       responses:
         '200':
           description: Успешный ответ
@@ -19,6 +27,13 @@ paths:
       operationId: withdraw
       summary: Списать со счета
       parameters:
+        - name: userId
+          in: query
+          description: Идентификатор пользователя
+          required: true
+          schema:
+            type: integer
+            example: 1
         - name: amount
           in: query
           description: Сумма списания
@@ -38,6 +53,10 @@ components:
     BalanceInfo:
       type: object
       properties:
+        userId:
+          type: integer
+          description: ИД пользователя
+          example: 1
         currentValue:
           type: number
           description: Текущий баланс

@@ -23,6 +23,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.model.dto.ActionDto;
+import ru.yandex_practicum.shoponline.model.dto.BalanceInfoDto;
 import ru.yandex_practicum.shoponline.model.dto.ItemDto;
 import ru.yandex_practicum.shoponline.model.dto.OrderDto;
 import ru.yandex_practicum.shoponline.model.entity.Item;
@@ -217,10 +218,11 @@ public class ShopController {
                 return Mono.just(new OrderDto(null, cart.getTotalSum(), cart.getCreatedAt(), List.of()));
             }
         });
-        var balanceInfo = paymentAppService.checkBalance();
+        Mono<BalanceInfoDto> balanceInfoDtoMono = userService.findByName(userDetails.getUsername())
+                .flatMap(user -> paymentAppService.checkBalance(user.getId()));
         model.addAttribute("items", orderDtoMono.map(OrderDto::getItems));
         model.addAttribute("total", orderDtoMono.map(OrderDto::getTotalSum));
-        model.addAttribute("balance", balanceInfo);
+        model.addAttribute("balance", balanceInfoDtoMono);
         model.addAttribute("user", userDetails.getUsername());
         return Mono.just("cart");
     }
@@ -244,7 +246,7 @@ public class ShopController {
         return userService.findByName(userDetails.getUsername())
                 .flatMap(user -> orderService.getCart(user.getId()))
                 .flatMap(cart -> {
-                    paymentAppService.withdraw(cart.getTotalSum());
+                    paymentAppService.withdraw(cart.getUserId(), cart.getTotalSum());
                     return orderService.createNewOrder(cart);
                 })
                 .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
