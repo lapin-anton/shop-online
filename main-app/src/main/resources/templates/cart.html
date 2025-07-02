@@ -25,6 +25,12 @@
 <a href="/" style="float:right;">
     <b>ГЛАВНАЯ &#x2935;</b>
 </a>
+<div>
+    <h1 th:text="${user}"></h1>
+</div>
+<a href="/logout">
+    ВЫЙТИ&#x2935;
+</a>
 <div class="notification" th:if="${balance.message}" th:text="${balance.message}"></div>
 <div class="notification" th:if="${balance.getCurrentValue - total < 0}" th:text="'Недостаточно средств на счете'"></div>
 
