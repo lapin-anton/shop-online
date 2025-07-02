@@ -106,18 +106,18 @@ public class ShopController {
                 .body(new ByteArrayResource(product.getImage())));
     }
 
-//    @PostMapping("/main/item/{itemId}")
-//    public Mono<String> changeItemCountOnMain(
-//            @PathVariable("itemId") Long itemId,
-//            @ModelAttribute ActionDto action,
-//            @AuthenticationPrincipal UserDetails userDetails
-//    ) {
-//        return userService.findByName(userDetails != null ? userDetails.getUsername() : null)
-//                .flatMap(user -> orderService.getCart(user.getId()))
-//                .flatMap(cart -> cartService.updateCartItem(cart.getUserId(), itemId, action.getAction()))
-//                .flatMap(cart -> Mono.just("redirect:/"));
-//    }
-//
+    @PostMapping("/main/item/{itemId}")
+    public Mono<String> changeItemCountOnMain(
+            @PathVariable("itemId") Long itemId,
+            @ModelAttribute ActionDto action,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return userService.findByName(userDetails.getUsername())
+                .flatMap(user -> orderService.getCart(user.getId()))
+                .flatMap(cart -> cartService.updateCartItem(cart.getUserId(), itemId, action.getAction()))
+                .flatMap(cart -> Mono.just("redirect:/"));
+    }
+
     @GetMapping("/item/{itemId}")
     public String showItem(Model model,
                            @PathVariable("itemId") Long itemId,
@@ -143,17 +143,19 @@ public class ShopController {
         model.addAttribute("isAnonym", userDetails == null);
         return "item";
     }
-//
-//    @Transactional
-//    @PostMapping("/item/{itemId}")
-//    public Mono<String> changeItemCount(
-//            @PathVariable("itemId") Long itemId,
-//            @ModelAttribute ActionDto action
-//    ) {
-//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
-//                .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
-//    }
-//
+
+    @Transactional
+    @PostMapping("/item/{itemId}")
+    public Mono<String> changeItemCount(
+            @PathVariable("itemId") Long itemId,
+            @ModelAttribute ActionDto action,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return userService.findByName(userDetails.getUsername()).flatMap(user -> orderService.getCart(user.getId()))
+                .flatMap(cart -> cartService.updateCartItem(cart.getUserId(), itemId, action.getAction()))
+                .flatMap(cart -> Mono.just("redirect:/item/" + itemId));
+    }
+
     @GetMapping("/orders")
     public Mono<String> showOrders(Model model,
                                    @AuthenticationPrincipal UserDetails userDetails) {
@@ -222,27 +224,31 @@ public class ShopController {
         model.addAttribute("user", userDetails.getUsername());
         return Mono.just("cart");
     }
-//
-//    @Transactional
-//    @PostMapping("/cart/item/{itemId}")
-//    public Mono<String> changeItemCountOnCart(
-//            @PathVariable("itemId") Long itemId,
-//            @ModelAttribute ActionDto action
-//    ) {
-//        return orderService.getCart().flatMap(cart -> cartService.updateCartItem(itemId, action.getAction()))
-//                .flatMap(cart -> Mono.just("redirect:/cart/items"));
-//    }
-//
-//    @Transactional
-//    @PostMapping("/buy")
-//    public Mono<String> buy() {
-//        return orderService.getCart()
-//                .flatMap(cart -> {
-//                    paymentAppService.withdraw(cart.getTotalSum());
-//                    return orderService.createNewOrder(cart);
-//                })
-//                .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
-//    }
+
+    @Transactional
+    @PostMapping("/cart/item/{itemId}")
+    public Mono<String> changeItemCountOnCart(
+            @PathVariable("itemId") Long itemId,
+            @ModelAttribute ActionDto action,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return userService.findByName(userDetails.getUsername())
+                .flatMap(user -> orderService.getCart(user.getId()))
+                .flatMap(cart -> cartService.updateCartItem(cart.getUserId(), itemId, action.getAction()))
+                .flatMap(cart -> Mono.just("redirect:/cart/items"));
+    }
+
+    @Transactional
+    @PostMapping("/buy")
+    public Mono<String> buy(@AuthenticationPrincipal UserDetails userDetails) {
+        return userService.findByName(userDetails.getUsername())
+                .flatMap(user -> orderService.getCart(user.getId()))
+                .flatMap(cart -> {
+                    paymentAppService.withdraw(cart.getTotalSum());
+                    return orderService.createNewOrder(cart);
+                })
+                .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
+    }
 //
 //    @GetMapping("/items/add")
 //    public Mono<String> showAddItemForm(Model model) {

@@ -27,11 +27,12 @@ public class OrderService {
 
         return cart
                 .flatMap(Mono::just)
-                .defaultIfEmpty(createNewCart());
+                .defaultIfEmpty(createNewCart(userId));
     }
 
-    private Order createNewCart() {
+    private Order createNewCart(Long userId) {
         var cart = new Order();
+        cart.setUserId(userId);
         cart.setTotalSum(0.0);
         return cart;
     }
