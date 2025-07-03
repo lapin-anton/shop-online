@@ -13,7 +13,7 @@
     <a th:if="${!isAnonym}" href="/cart/items" style="float:right;">
         <b>КОРЗИНА &#x2935;</b>
     </a>
-    <a th:if="${!isAnonym}" href="/items/add" style="float:right;">
+    <a th:if="${!isAnonym && role=='ROLE_ADMIN'}" href="/items/add" style="float:right;">
         <b>ДОБАВЛЕНИЕ ТОВАРОВ&#x2935;</b>
     </a>
     <div>

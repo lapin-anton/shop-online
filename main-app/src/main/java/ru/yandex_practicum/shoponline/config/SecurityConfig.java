@@ -31,6 +31,7 @@ public class SecurityConfig {
             .formLogin(Customizer.withDefaults())
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/", "/item/*", "/images/*").permitAll()
+                .pathMatchers("/items/add", "/upload").hasRole("ADMIN")
                 .anyExchange().authenticated()
             )
             .logout(logout ->

@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -94,6 +95,8 @@ public class ShopController {
         model.addAttribute("sort", sort);
         model.addAttribute("user", userDetails != null ? userDetails.getUsername() : null);
         model.addAttribute("isAnonym", userDetails == null);
+        var role = userDetails != null ? userDetails.getAuthorities().stream().toList().get(0).getAuthority() : null;
+        model.addAttribute("role", role);
         return Mono.just("main");
     }
 
@@ -251,20 +254,20 @@ public class ShopController {
                 })
                 .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
     }
-//
-//    @GetMapping("/items/add")
-//    public Mono<String> showAddItemForm(Model model) {
-//        return Mono.just("add-item");
-//    }
-//
-//    @Transactional
-//    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
-//        return fileMono.flux()
-//                .flatMap(csvParserUtil::parseCsv)
-//                .flatMap(productService::saveNewProduct)
-//                .collectList()
-//                .flatMap(products -> Mono.just("redirect:/"));
-//    }
+
+    @GetMapping("/items/add")
+    public Mono<String> showAddItemForm(Model model) {
+        return Mono.just("add-item");
+    }
+
+    @Transactional
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<String> uploadCsv(@RequestPart("file") Mono<FilePart> fileMono) {
+        return fileMono.flux()
+                .flatMap(csvParserUtil::parseCsv)
+                .flatMap(productService::saveNewProduct)
+                .collectList()
+                .flatMap(products -> Mono.just("redirect:/"));
+    }
 
 }
