@@ -2,24 +2,24 @@ package ru.yandex_practicum.shoponline.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientProviderBuilder;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 
 @Configuration
 public class OAuth2ClientConfiguration {
 
     @Bean
-    public OAuth2AuthorizedClientManager authorizedClientManager(
-            ClientRegistrationRepository clientRegistrationRepository,
-            OAuth2AuthorizedClientService authorizedClientService
+    public ReactiveOAuth2AuthorizedClientManager authorizedClientManager(
+            ReactiveClientRegistrationRepository clientRegistrationRepository,
+            ReactiveOAuth2AuthorizedClientService authorizedClientService
     ) {
-        AuthorizedClientServiceOAuth2AuthorizedClientManager manager =
-                new AuthorizedClientServiceOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientService);
+        AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager manager =
+                new AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientService);
 
-        manager.setAuthorizedClientProvider(OAuth2AuthorizedClientProviderBuilder.builder()
+        manager.setAuthorizedClientProvider(ReactiveOAuth2AuthorizedClientProviderBuilder.builder()
                 .clientCredentials()
                 .refreshToken()
                 .build());

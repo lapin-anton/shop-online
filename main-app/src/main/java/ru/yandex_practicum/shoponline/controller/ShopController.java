@@ -248,10 +248,10 @@ public class ShopController {
     public Mono<String> buy(@AuthenticationPrincipal UserDetails userDetails) {
         return userService.findByName(userDetails.getUsername())
                 .flatMap(user -> orderService.getCart(user.getId()))
-                .flatMap(cart -> {
-                    paymentAppService.withdraw(cart.getUserId(), cart.getTotalSum());
-                    return orderService.createNewOrder(cart);
-                })
+                .flatMap(cart ->
+                    paymentAppService.withdraw(cart.getUserId(), cart.getTotalSum())
+                            .flatMap(response -> orderService.createNewOrder(cart))
+                )
                 .flatMap(newOrder -> Mono.just("redirect:/order/" + newOrder.getId() + "/new"));
     }
 

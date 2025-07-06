@@ -10,8 +10,10 @@ import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.oidc.web.server.logout.OidcClientInitiatedServerLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.authentication.logout.HttpStatusReturningServerLogoutSuccessHandler;
+import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import reactor.core.publisher.Mono;
 import ru.yandex_practicum.shoponline.service.UserService;
 
@@ -24,6 +26,8 @@ public class SecurityConfig {
 
     private final UserService userService;
 
+    private final ReactiveClientRegistrationRepository clientRegistrationRepository;
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http
@@ -34,9 +38,8 @@ public class SecurityConfig {
                 .pathMatchers("/items/add", "/upload").hasRole("ADMIN")
                 .anyExchange().authenticated()
             )
-            .logout(logout ->
-                    logout.logoutUrl("/logout")
-                    .logoutSuccessHandler(new HttpStatusReturningServerLogoutSuccessHandler())
+            .logout(logout -> logout
+                    .logoutSuccessHandler(oidcLogoutSuccessHandler())
             )
             .exceptionHandling(handling -> handling
                     .accessDeniedHandler((exchange, denied) ->
@@ -44,6 +47,14 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    private ServerLogoutSuccessHandler oidcLogoutSuccessHandler() {
+        OidcClientInitiatedServerLogoutSuccessHandler handler =
+                new OidcClientInitiatedServerLogoutSuccessHandler(clientRegistrationRepository);
+        handler.setPostLogoutRedirectUri("{baseUrl}");
+
+        return handler;
     }
 
     @Bean
