@@ -29,12 +29,14 @@ public class Order {
     @Column("user_id")
     private Long userId;
 
-    public Order(Double totalSum) {
+    public Order(Double totalSum, Long userId) {
         this.totalSum = totalSum;
+        this.userId = userId;
     }
 
-    public Order(Double totalSum, Timestamp createdAt) {
+    public Order(Double totalSum, Timestamp createdAt, Long userId) {
         this.totalSum = totalSum;
         this.createdAt = createdAt;
+        this.userId = userId;
     }
 }

@@ -29,14 +29,15 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
 
     @Test
     void findAllOrders_shouldReturnAllOrdersWithCreatedAt() {
+        Long userId = 1L;
         List<Order> orders = List.of(
-                new Order(1000.0, Timestamp.valueOf(LocalDateTime.now())),
-                new Order(1500.0, Timestamp.valueOf(LocalDateTime.now())),
-                new Order(3000.0)
+                new Order(1000.0, Timestamp.valueOf(LocalDateTime.now()), userId),
+                new Order(1500.0, Timestamp.valueOf(LocalDateTime.now()), userId),
+                new Order(3000.0, userId)
         );
         orderRepository.saveAll(orders).subscribe();
 
-        var founded = orderService.findAllOrders().toIterable();
+        var founded = orderService.findAllOrdersByUser(userId).toIterable();
 
         assertThat(founded)
                 .isNotEmpty()
@@ -48,12 +49,17 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
 
     @Test
     void getCart_shouldReturnNewCart() {
-        orderService.getCart()
+        Long userId = 1L;
+        orderService.getCart(userId)
                 .doOnNext(cart -> {
                     assertThat(cart)
                             .isNotNull()
                             .extracting(Order::getCreatedAt)
                             .isNull();
+
+                    assertThat(cart)
+                            .extracting(Order::getUserId)
+                            .isEqualTo(userId);
 
                     assertThat(cart)
                             .extracting(Order::getTotalSum)
@@ -64,13 +70,18 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
 
     @Test
     void saveNewCart_shouldSaveCart() {
-        var newCart = new Order(0.0);
+        Long userId = 1L;
+        var newCart = new Order(0.0, userId);
         orderService.saveNewCart(newCart)
                 .doOnNext(cart -> {
                     assertThat(cart)
                             .isNotNull()
                             .extracting(Order::getCreatedAt)
                             .isNull();
+
+                    assertThat(cart)
+                            .extracting(Order::getUserId)
+                            .isEqualTo(userId);
 
                     assertThat(cart)
                             .extracting(Order::getTotalSum)
@@ -81,10 +92,11 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
 
     @Test
     void findOrder_shouldFindOrderById() {
+        Long userId = 1L;
         List<Order> orders = List.of(
-                new Order(1000.0, Timestamp.valueOf(LocalDateTime.now())),
-                new Order(1500.0, Timestamp.valueOf(LocalDateTime.now())),
-                new Order(3000.0)
+                new Order(1000.0, Timestamp.valueOf(LocalDateTime.now()), userId),
+                new Order(1500.0, Timestamp.valueOf(LocalDateTime.now()), userId),
+                new Order(3000.0, userId)
         );
         orderRepository.saveAll(orders).subscribe();
 
@@ -94,6 +106,10 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
                             .isNotNull()
                             .extracting(Order::getId)
                             .isEqualTo(1L);
+
+                    assertThat(order)
+                            .extracting(Order::getUserId)
+                            .isEqualTo(userId);
 
                     assertThat(order)
                             .extracting(Order::getTotalSum)
@@ -114,19 +130,23 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
                 new ItemDto(3000.0, 1)
         );
 
-        Order cart = new Order(0.0);
+        Order cart = new Order(0.0, 1L);
         orderService.saveCart(cart, itemDtos)
                 .doOnNext(c -> {
                     assertThat(c)
                             .isNotNull()
                             .extracting(Order::getTotalSum)
                             .isEqualTo(10000.0);
+                    assertThat(c)
+                            .isNotNull()
+                            .extracting(Order::getUserId)
+                            .isEqualTo(1L);
                 }).block();
     }
 
     @Test
     void createNewOrder_shouldSaveOrderWithCreatedAt() {
-        Order cart = new Order(1000.0);
+        Order cart = new Order(1000.0, 1L);
 
         orderService.createNewOrder(cart)
                 .doOnNext(order -> {
@@ -134,6 +154,11 @@ class OrderServiceIntegrationTest extends ShopOnlineApplicationTests {
                             .isNotNull()
                             .extracting(Order::getTotalSum)
                             .isEqualTo(1000.0);
+
+                    assertThat(order)
+                            .isNotNull()
+                            .extracting(Order::getUserId)
+                            .isEqualTo(1L);
 
                     assertThat(order)
                             .extracting(Order::getCreatedAt)
