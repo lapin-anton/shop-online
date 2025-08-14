@@ -36,37 +36,40 @@ class OrderServiceTest {
     @Test
     void getCart_shouldReturnExistingCart() {
         Order existingCart = new Order();
+        existingCart.setUserId(1L);
         existingCart.setTotalSum(0.0);
 
-        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Mono.just(existingCart));
+        when(orderRepository.findByUserIdAndCreatedAtIsNull(1L)).thenReturn(Mono.just(existingCart));
 
-        Mono<Order> cart = orderService.getCart();
+        Mono<Order> cart = orderService.getCart(1L);
 
         cart.subscribe(result -> {
             assertNotNull(result);
             assertEquals(existingCart.getTotalSum(), result.getTotalSum());
         });
 
-        verify(orderRepository, times(1)).findByCreatedAtIsNull();
+        verify(orderRepository, times(1)).findByUserIdAndCreatedAtIsNull(1L);
     }
 
     @Test
     void getCart_shouldCreateNewCartIfNoneExists() {
-        when(orderRepository.findByCreatedAtIsNull()).thenReturn(Mono.empty());
+        when(orderRepository.findByUserIdAndCreatedAtIsNull(2L)).thenReturn(Mono.empty());
 
-        Mono<Order> cart = orderService.getCart();
+        Mono<Order> cart = orderService.getCart(2L);
 
         cart.subscribe(result -> {
             assertNotNull(result);
+            assertEquals(2L, result.getUserId());
             assertEquals(0.0, result.getTotalSum());
         });
 
-        verify(orderRepository, times(1)).findByCreatedAtIsNull();
+        verify(orderRepository, times(1)).findByUserIdAndCreatedAtIsNull(2L);
     }
 
     @Test
     void saveNewCart_shouldSaveCart() {
         Order cart = new Order();
+        cart.setUserId(1L);
         cart.setTotalSum(0.0);
 
         when(orderRepository.save(any(Order.class))).thenReturn(Mono.just(cart));
@@ -75,6 +78,7 @@ class OrderServiceTest {
 
         savedCart.subscribe(result -> {
             assertNotNull(result);
+            assertEquals(cart.getUserId(), result.getUserId());
             assertEquals(cart.getTotalSum(), result.getTotalSum());
         });
 
@@ -114,6 +118,7 @@ class OrderServiceTest {
     @Test
     void saveCart_shouldSaveUpdatedCart() {
         Order cart = new Order();
+        cart.setUserId(1L);
         cart.setTotalSum(0.0);
 
         ItemDto item1 = new ItemDto(10.0, 2);
@@ -127,6 +132,7 @@ class OrderServiceTest {
 
         updatedCart.subscribe(result -> {
             assertNotNull(result);
+            assertEquals(1L, result.getUserId());
             assertEquals(35.0, result.getTotalSum());
         });
 

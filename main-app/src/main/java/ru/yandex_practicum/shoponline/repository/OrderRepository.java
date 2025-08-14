@@ -9,8 +9,8 @@ import ru.yandex_practicum.shoponline.model.entity.Order;
 @Repository
 public interface OrderRepository extends R2dbcRepository<Order, Long> {
 
-    Mono<Order> findByCreatedAtIsNull();
+    Mono<Order> findByUserIdAndCreatedAtIsNull(Long userId);
 
-    Flux<Order> findByCreatedAtIsNotNull();
+    Flux<Order> findByUserIdAndCreatedAtIsNotNull(Long userId);
 
 }

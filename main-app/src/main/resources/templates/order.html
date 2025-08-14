@@ -16,6 +16,12 @@
 <a href="/" style="float:right;">
     <b>ГЛАВНАЯ &#x2935;</b>
 </a>
+<div>
+    <h1 th:text="${user}"></h1>
+</div>
+<a href="/logout">
+    ВЫЙТИ&#x2935;
+</a>
 <h1 style="text-align:center" th:if="${newOrder}">Поздравляем! Успешная покупка! &#128578;</h1>
 <table style="width:70%;margin-left:auto;margin-right:auto;">
     <tr>

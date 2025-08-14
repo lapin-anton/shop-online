@@ -20,8 +20,8 @@ public class CartService {
 
     private final ProductService productService;
 
-    public Mono<Order> updateCartItem(Long productId, String action) {
-        return orderService.getCart()
+    public Mono<Order> updateCartItem(Long userId, Long productId, String action) {
+        return orderService.getCart(userId)
                 .flatMap(orderService::saveNewCart)
                 .flatMap(cart -> itemService.findByOrderId(cart.getId())
                         .filter(it -> it.getProductId().equals(productId))
@@ -47,8 +47,8 @@ public class CartService {
                 );
     }
 
-    public Mono<HashMap<Long, Item>> getCartItemMap() {
-        return orderService.getCart()
+    public Mono<HashMap<Long, Item>> getCartItemMap(Long userId) {
+        return orderService.getCart(userId)
                 .flatMap(cart -> {
                     Long cartId = cart.getId();
                     return itemService.findByOrderId(cartId)

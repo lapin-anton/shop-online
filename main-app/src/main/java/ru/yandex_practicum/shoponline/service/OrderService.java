@@ -18,20 +18,21 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    public Flux<Order> findAllOrders() {
-        return orderRepository.findByCreatedAtIsNotNull();
+    public Flux<Order> findAllOrdersByUser(Long userId) {
+        return orderRepository.findByUserIdAndCreatedAtIsNotNull(userId);
     }
 
-    public Mono<Order> getCart() {
-        Mono<Order> cart = orderRepository.findByCreatedAtIsNull();
+    public Mono<Order> getCart(Long userId) {
+        Mono<Order> cart = orderRepository.findByUserIdAndCreatedAtIsNull(userId);
 
         return cart
                 .flatMap(Mono::just)
-                .defaultIfEmpty(createNewCart());
+                .defaultIfEmpty(createNewCart(userId));
     }
 
-    private Order createNewCart() {
+    private Order createNewCart(Long userId) {
         var cart = new Order();
+        cart.setUserId(userId);
         cart.setTotalSum(0.0);
         return cart;
     }

@@ -7,14 +7,23 @@
 </head>
 
 <body>
-    <a href="/orders" style="float:right;">
+    <a th:if="${!isAnonym}" href="/orders" style="float:right;">
         <b>ЗАКАЗЫ &#x2935;</b>
     </a>
-    <a href="/cart/items" style="float:right;">
+    <a th:if="${!isAnonym}" href="/cart/items" style="float:right;">
         <b>КОРЗИНА &#x2935;</b>
     </a>
-    <a href="/items/add" style="float:right;">
+    <a th:if="${!isAnonym && role=='ROLE_ADMIN'}" href="/items/add" style="float:right;">
         <b>ДОБАВЛЕНИЕ ТОВАРОВ&#x2935;</b>
+    </a>
+    <div>
+        <h1 th:if="${!isAnonym}" th:text="${user}"></h1>
+    </div>
+    <a th:if="${isAnonym}" href="/login">
+        ВОЙТИ&#x2935;
+    </a>
+    <a th:if="${!isAnonym}" href="/logout">
+        ВЫЙТИ&#x2935;
     </a>
     <table style="width:70%;margin-left:auto;margin-right:auto;">
         <tr>
@@ -76,7 +85,7 @@
                     </tr>
                     <tr>
                         <td>
-                            <form th:action="${'/main/item/'+item.getId()}" method="post">
+                            <form th:action="${'/main/item/'+item.getId()}" method="post" th:if="${!isAnonym}">
                                 <button th:if="${item.getCount() > 0}" name="action" value="minus">-</button>
                                 <span th:text="${item.getCount()}"></span>
                                 <button name="action" value="plus">+</button>
