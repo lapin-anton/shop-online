@@ -1,0 +1,78 @@
+services:
+  app:
+    container_name: main-app
+    build: ./main-app
+    ports:
+      - "8180:8180"
+    environment:
+      - SPRING_R2DBC_URL=r2dbc:postgresql://db:5432/shop-online
+      - SPRING_R2DBC_USERNAME=postgres
+      - SPRING_R2DBC_PASSWORD=1234
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - KEYCLOAK_CLIENT_SECRET=${CLIENT_SECRET}
+      - KEYCLOAK_CLIENT_ID=shop-online
+      - KEYCLOAK_ISSUE_URL=http://keycloak:8080/realms/master
+      - PAYMENT_APP_URL=http://payment-app:8280
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  payment-service:
+    container_name: payment-app
+    build: ./payment-app
+    ports:
+      - "8280:8280"
+    environment:
+      - SPRING_R2DBC_URL=r2dbc:postgresql://db:5432/shop-online
+      - SPRING_R2DBC_USERNAME=postgres
+      - SPRING_R2DBC_PASSWORD=1234
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  db:
+    container_name: db
+    image: postgres:latest
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: shop-online
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+ 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME=keycloak
+    ports:
+      - "8080:8080"
+    command:
+      - start-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/realms/master >/dev/null 2>&1 || exit 1"]        
+      interval: 10s
+      timeout: 5s
+      retries: 5
